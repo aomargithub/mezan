@@ -1,0 +1,33 @@
+services:
+  mezan-db:
+    container_name: mezan-db
+    image: postgres:latest
+    ports:
+      - "5454:5432"
+    expose:
+      - "5432"
+    volumes:
+      - ./db/mezan-db-init.sql:/docker-entrypoint-initdb.d/mezan-db-init.sql:ro
+      -  mezan-db-vol:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: mezan
+      POSTGRES_PASSWORD: mezan
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U mezan -d mezan'"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+  liquibase:
+    container_name: liquibase-mezan-db
+    image: liquibase:latest
+    depends_on:
+      mezan-db:
+        condition: service_healthy
+    volumes:
+      - ./db/liquibase/liquibase.properties:/liquibase/liquibase.properties
+      - ./db/liquibase/master.xml:/liquibase/changelog/master.xml
+      - ./db/liquibase/changeset:/liquibase/changelog/changeset
+    command: --defaults-file=/liquibase/liquibase.properties update
+volumes:
+  mezan-db-vol:
+    name:  mezan-db-vol
