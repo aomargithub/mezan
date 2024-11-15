@@ -1,10 +1,13 @@
 package domain
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
-type Mezana struct {
+type Mezani struct {
 	Id uuid.UUID
 	Name string
+	CreatedAt time.Time
 }

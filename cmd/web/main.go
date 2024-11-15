@@ -39,7 +39,7 @@ func main() {
 		Db: db,
 	}
 
-	server.RegisterHandlers()
+	server.Init()
 	logger.Info("initializing the serve on", slog.Any("addr", *addr))
 	err = http.ListenAndServe(*addr, server.Mux)
 	logger.Error(err.Error())
