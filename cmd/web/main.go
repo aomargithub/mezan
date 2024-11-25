@@ -1,16 +1,14 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
+	mezanHttp "github.com/aomargithub/mezan/internal/http"
 	"log/slog"
 	"net/http"
 	"os"
-	"database/sql"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	mezanHttp "github.com/aomargithub/mezan/internal/http"
+	"time"
 )
-
-
 
 func main() {
 	addr := flag.String("addr", ":4000", "Http port")
@@ -18,45 +16,30 @@ func main() {
 	dsn := flag.String("dsn", "host=localhost port=5454 user=mezan password=mezan dbname=mezan sslmode=disable", "Postgresql data source name")
 	flag.Parse()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout , &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-		AddSource: true,
-	}))
-
-	db, err := openDB(*dsn)
-    if err != nil {
-        logger.Error(err.Error())
-        os.Exit(1)
-    }
-    defer db.Close()
-
-	
-
 	server := mezanHttp.Server{
-		Logger: logger,
-		Addr: *addr,
 		StaticDir: *staticDir,
-		Db: db,
+		DSN:       *dsn,
 	}
 
 	server.Init()
-	logger.Info("initializing the serve on", slog.Any("addr", *addr))
-	err = http.ListenAndServe(*addr, server.Mux)
-	logger.Error(err.Error())
+	defer server.DB.Close()
+	server.Logger.Info("initializing the serve on", slog.Any("addr", *addr))
+
+	tlsConfig := &tls.Config{
+		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+	}
+
+	srv := &http.Server{
+		Addr:         *addr,
+		Handler:      server.Mux,
+		ErrorLog:     slog.NewLogLogger(server.Logger.Handler(), slog.LevelError),
+		TLSConfig:    tlsConfig,
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	err := srv.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
+	server.Logger.Error(err.Error())
 	os.Exit(1)
-}
-
-func openDB(dsn string) (*sql.DB, error) {
-    db, err := sql.Open("pgx", dsn)
-    if err != nil {
-        return nil, err
-    }
-
-    err = db.Ping()
-    if err != nil {
-        db.Close()
-        return nil, err
-    }
-
-    return db, nil
 }

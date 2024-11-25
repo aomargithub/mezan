@@ -2,12 +2,21 @@ package domain
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type Mezani struct {
-	Id uuid.UUID
-	Name string
+	Id             int
+	Name           string
+	CreatorId      int
+	TotalAmount    float32
+	SettledPercent float32
+	LastUpdatedAt  time.Time
+	CreatedAt      time.Time
+}
+
+type User struct {
+	Id        int
+	Name      string
+	Email     string
 	CreatedAt time.Time
 }

@@ -1,7 +1,12 @@
 {{define "nav"}}
  <nav>
-    <a href='/'>Home</a>
-   
-    <a href='/mezanis/create'>New Mezani</a>
+    {{with .Authentication}}
+        <a href='/'>Home</a>
+        <a href='/mezanis/create'>New Mezani</a>
+        Welcom {{.Name}}
+    {{else}}
+        <a href='/login'>login</a>
+        <a href='/users/signup'>sign up</a>
+    {{end}}
 </nav>
 {{end}}

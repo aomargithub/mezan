@@ -1,25 +1,29 @@
 {{define "title"}}Home{{end}}
 
 {{define "main"}}
-Mezanis
-    <table>
-        <tr>
-            <td>
-                Name
-            <td>
-            <td>
-                Created On
-            <td>
-        <tr>
-        {{range .}}
+    {{if .Authentication}}
+        Mezanis
+        <table>
             <tr>
                 <td>
-                    {{.Name}}
+                    Name
                 <td>
                 <td>
-                    {{.CreatedAt}}
+                    Created On
                 <td>
             <tr>
-        {{end}}
-    </table>
+            {{range .Mezanis}}
+                <tr>
+                    <td>
+                        <a href="/mezanis/{{.Id}}">{{.Name}}</href>
+                    <td>
+                    <td>
+                        {{.CreatedAt}}
+                    <td>
+                <tr>
+            {{end}}
+        </table>
+    {{else}}
+        <a href='/login'>login</a>
+    {{end}}
 {{end}}
