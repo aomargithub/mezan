@@ -1,36 +1,32 @@
 {{define "title"}} Mezani {{.Name}}{{end}}
 
 {{define "main"}}
-    {{if .Authentication}}
-        {{with .Mezani}}
-            <table>
-                <tr>
-                    <td>
-                        Id
-                    </td>
-                    <td>
-                        {{.Id}}
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        Name
-                    </td>
-                    <td>
-                        {{.Name}}
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        Created On
-                    </td>
-                    <td>
-                        {{.CreatedAt}}
-                    </td>
-                </tr>
-            </table>
-        {{end}}
-    {{else}}
-        <a href='/login'>login</a>
+    {{with .Mezani}}
+        <table>
+            <tr>
+                <td>
+                    Id
+                </td>
+                <td>
+                    {{.Id}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Name
+                </td>
+                <td>
+                    {{.Name}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Created On
+                </td>
+                <td>
+                    {{.CreatedAt}}
+                </td>
+            </tr>
+        </table>
     {{end}}
 {{end}}

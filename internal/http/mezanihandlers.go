@@ -53,7 +53,7 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 			s.render(w, r, "mezaniCreate.tmpl", http.StatusOK, mezaniCreateForm)
 			return
 		}
-		userId := s.sessionManager.GetInt(r.Context(), s.authenticatedUserIdKey)
+		userId := s.sessionManager.GetInt(r.Context(), authenticatedUserId)
 		mezani := domain.Mezani{
 			Name:      name,
 			CreatorId: userId,

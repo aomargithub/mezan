@@ -45,3 +45,11 @@ func (s UserService) GetIdAndHashedPassword(email string) (domain.User, string, 
 	}
 	return user, hashedPassword, nil
 }
+
+func (s UserService) Exists(id int) (bool, error) {
+	stmt := `select exists(select 1 from users where id  = $1)`
+
+	var exists bool
+	err := s.DB.QueryRow(stmt, id).Scan(&exists)
+	return exists, err
+}

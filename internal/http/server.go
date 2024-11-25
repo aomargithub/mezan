@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/alexedwards/scs/postgresstore"
@@ -17,18 +18,22 @@ import (
 	"time"
 )
 
+type contextKey string
+
+const authenticatedUserId = "authenticatedUserId"
+const authenticatedUserName = "authenticatedUserName"
+const isAuthenticatedCtxKey = contextKey("isAuthenticated")
+
 type Server struct {
-	Mux                      http.Handler
-	StaticDir                string
-	Logger                   *slog.Logger
-	DSN                      string
-	DB                       *sql.DB
-	sessionManager           *scs.SessionManager
-	mezaniService            db.MezaniService
-	userService              db.UserService
-	templates                map[string]*template.Template
-	authenticatedUserIdKey   string
-	authenticatedUserNameKey string
+	Mux            http.Handler
+	StaticDir      string
+	Logger         *slog.Logger
+	DSN            string
+	DB             *sql.DB
+	sessionManager *scs.SessionManager
+	mezaniService  db.MezaniService
+	userService    db.UserService
+	templates      map[string]*template.Template
 }
 
 type Authentication struct {
@@ -37,9 +42,9 @@ type Authentication struct {
 }
 
 func (s Server) createAuthentication(r *http.Request) *Authentication {
-	if s.sessionManager.Exists(r.Context(), s.authenticatedUserIdKey) {
-		id := s.sessionManager.GetInt(r.Context(), s.authenticatedUserIdKey)
-		name := s.sessionManager.GetString(r.Context(), s.authenticatedUserNameKey)
+	if s.isAuthenticated(r) {
+		id := s.sessionManager.GetInt(r.Context(), authenticatedUserId)
+		name := s.sessionManager.GetString(r.Context(), authenticatedUserName)
 		return &Authentication{
 			Name: name,
 			Id:   id,
@@ -100,9 +105,9 @@ func (s *Server) registerHandlers() {
 	mux := http.NewServeMux()
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 
-	mux.Handle("GET /mezanis/{id}", s.sessionManager.LoadAndSave(s.getMezaniHandler()))
-	mux.Handle("GET /mezanis/create", s.sessionManager.LoadAndSave(s.getMezaniCreateHandler()))
-	mux.Handle("POST /mezanis/create", s.sessionManager.LoadAndSave(s.postMezaniCreateHandler()))
+	mux.Handle("GET /mezanis/{id}", s.sessionManager.LoadAndSave(s.authenticate(s.requireAuthentication(s.getMezaniHandler()))))
+	mux.Handle("GET /mezanis/create", s.sessionManager.LoadAndSave(s.authenticate(s.requireAuthentication(s.getMezaniCreateHandler()))))
+	mux.Handle("POST /mezanis/create", s.sessionManager.LoadAndSave(s.authenticate(s.requireAuthentication(s.postMezaniCreateHandler()))))
 
 	mux.Handle("GET /users/signup", s.sessionManager.LoadAndSave(s.getUserSignUpHandler()))
 	mux.Handle("POST /users/signup", s.sessionManager.LoadAndSave(s.postUserSignUpHandler()))
@@ -112,7 +117,7 @@ func (s *Server) registerHandlers() {
 
 	mux.Handle("POST /logout", s.sessionManager.LoadAndSave(s.postLogoutHandler()))
 
-	mux.Handle("GET /{$}", s.sessionManager.LoadAndSave(s.homeHandler()))
+	mux.Handle("GET /{$}", s.sessionManager.LoadAndSave(s.authenticate(s.requireAuthentication(s.homeHandler()))))
 
 	s.Mux = s.recoverPanic(s.logRequest(commonHeaders(mux)))
 }
@@ -144,6 +149,52 @@ func (s Server) logRequest(next http.Handler) http.Handler {
 		s.Logger.Info("received request", "ip", ip, "proto", proto, "method", method, "uri", uri)
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s Server) authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userId := s.sessionManager.GetInt(r.Context(), authenticatedUserId)
+
+		if userId == 0 {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		exists, err := s.userService.Exists(userId)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+
+		if exists {
+			ctx := context.WithValue(r.Context(), isAuthenticatedCtxKey, true)
+			r = r.WithContext(ctx)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s Server) requireAuthentication(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !s.isAuthenticated(r) {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		// Otherwise set the "Cache-Control: no-store" header so that pages
+		// require authentication are not stored in the users browser cache (or
+		// other intermediary cache).
+		w.Header().Add("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s Server) isAuthenticated(r *http.Request) bool {
+	isAuthenticated, ok := r.Context().Value(isAuthenticatedCtxKey).(bool)
+	if !ok {
+		return false
+	}
+	return isAuthenticated
 }
 
 func (s Server) recoverPanic(next http.Handler) http.Handler {
@@ -210,6 +261,4 @@ func (s *Server) Init() {
 	s.initServices()
 	s.initSessionManager()
 	s.registerHandlers()
-	s.authenticatedUserIdKey = "authenticatedUserID"
-	s.authenticatedUserNameKey = "authenticatedUserName"
 }

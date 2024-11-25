@@ -1,20 +1,16 @@
 {{define "title"}}Create Mezani{{end}}
 {{define "main"}}
-    {{if .Authentication}}
-        <form action='/mezanis/create' method='POST'>
-            <div>
-                <label>Name:</label>
-                 {{with .FieldErrors.Name}}
-                    <label class='error'>{{.}}</label>
-                {{end}}
-                <input type='text' name='name' value='{{.Name}}'>
-            </div>
+    <form action='/mezanis/create' method='POST'>
+        <div>
+            <label>Name:</label>
+             {{with .FieldErrors.Name}}
+                <label class='error'>{{.}}</label>
+            {{end}}
+            <input type='text' name='name' value='{{.Name}}'>
+        </div>
 
-            <div>
-                <input type='submit' value='Create'>
-            </div>
-        </form>
-    {{else}}
-        <a href='/login'>login</a>
-    {{end}}
+        <div>
+            <input type='submit' value='Create'>
+        </div>
+    </form>
 {{end}}

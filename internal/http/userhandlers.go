@@ -13,11 +13,13 @@ type userSignUpForm struct {
 	Name  string
 	Email string
 	Validator
+	*Authentication
 }
 
 type loginForm struct {
 	Email string
 	Validator
+	*Authentication
 }
 
 func (s Server) getUserSignUpHandler() http.Handler {
@@ -106,10 +108,11 @@ func (s Server) postLoginHandler() http.Handler {
 			Email: email,
 		}
 		form.NotBlank("Email", email)
-		form.NotBlank("password", password)
+		form.NotBlank("Password", password)
 
 		if !form.Valid() {
 			s.render(w, r, "login.tmpl", http.StatusUnprocessableEntity, form)
+			return
 		}
 
 		tx, err := s.DB.Begin()
@@ -150,8 +153,8 @@ func (s Server) postLoginHandler() http.Handler {
 			return
 		}
 
-		s.sessionManager.Put(r.Context(), s.authenticatedUserIdKey, user.Id)
-		s.sessionManager.Put(r.Context(), s.authenticatedUserNameKey, user.Name)
+		s.sessionManager.Put(r.Context(), authenticatedUserId, user.Id)
+		s.sessionManager.Put(r.Context(), authenticatedUserName, user.Name)
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	})
 }
@@ -164,7 +167,7 @@ func (s Server) postLogoutHandler() http.Handler {
 			return
 		}
 
-		s.sessionManager.Remove(r.Context(), s.authenticatedUserIdKey)
+		s.sessionManager.Remove(r.Context(), authenticatedUserId)
 		s.sessionManager.Put(r.Context(), "flash", "You've been logged out successfully!")
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	})

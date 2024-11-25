@@ -21,8 +21,8 @@ create table mezanis
   created_at timestamp not null,
   last_updated_at  timestamp null,
   creator_id integer not null references users(id),
-  settled_percent float not null,
-  total_amount float not null
+  settled_amount float not null DEFAULT 0.00,
+  total_amount float not null DEFAULT 0.00
 );
 --rollback drop table mezanis;
 
@@ -33,7 +33,7 @@ create table expenses
   name varchar(500) not null,
   last_updated_at  timestamp null,
   created_at timestamp not null,
-  settled_percent float not null,
+  settled_amount float not null DEFAULT 0.00,
   total_amount float not null,
   creator_id integer not null references users(id),
   mezani_id integer not null references mezanis(id),
@@ -48,7 +48,7 @@ create table expense_items
   name varchar(500) not null,
   last_updated_at  timestamp null,
   created_at timestamp not null,
-  settled_percent float not null,
+  settled_amount float not null DEFAULT 0.00,
   amount float not null,
   expense_id integer not null references expenses(id),
   mezani_id integer not null references mezanis(id),
@@ -63,6 +63,7 @@ create table payments
   created_at timestamp not null,
   settled_percent float not null,
   amount float not null,
+  settlement_percent float not null,
   expense_item_id integer not null references expense_items(id),
   mezani_id integer not null references mezanis(id),
   creator_id integer not null references users(id) 

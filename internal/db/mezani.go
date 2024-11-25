@@ -12,8 +12,8 @@ type MezaniService struct {
 }
 
 func (s MezaniService) Create(mezani domain.Mezani) error {
-	stmt := `insert into mezanis (id, name, creator_id, created_at) values($1,$2,$3)`
-	_, err := s.DB.Exec(stmt, mezani.Id, mezani.Name, mezani.CreatorId, mezani.CreatedAt)
+	stmt := `insert into mezanis (name, creator_id, created_at) values($1,$2,$3)`
+	_, err := s.DB.Exec(stmt, mezani.Name, mezani.CreatorId, mezani.CreatedAt)
 
 	if err != nil {
 		return err

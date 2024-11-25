@@ -1,12 +1,21 @@
 {{define "nav"}}
- <nav>
-    {{with .Authentication}}
-        <a href='/'>Home</a>
-        <a href='/mezanis/create'>New Mezani</a>
-        Welcom {{.Name}}
-    {{else}}
-        <a href='/login'>login</a>
-        <a href='/users/signup'>sign up</a>
-    {{end}}
-</nav>
+     <nav>
+        <div>
+            {{with .Authentication}}
+                <a href='/'>Home</a>
+                <a href='/mezanis/create'>New Mezani</a>
+            {{end}}
+        </div>
+        <div>
+            {{with .Authentication}}
+                Welcome {{.Name}}
+                <form action="/logout" method="post">
+                    <button>Logout</button>
+                </form>
+            {{else}}
+                <a href='/login'>login</a>
+                <a href='/users/signup'>sign up</a>
+            {{end}}
+        </div>
+    </nav>
 {{end}}
