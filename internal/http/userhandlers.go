@@ -10,27 +10,35 @@ import (
 )
 
 type userSignUpForm struct {
-	Name  string
-	Email string
-	Validator
+	Name      string
+	Email     string
+	CsrfToken string
 	*Authentication
+	Validator
 }
 
 type loginForm struct {
 	Email string
 	Validator
 	*Authentication
+	CsrfToken string
 }
 
 func (s Server) getUserSignUpHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s.render(w, r, "userSignUp.tmpl", http.StatusOK, nil)
+		form := userSignUpForm{
+			CsrfToken: s.csrfToken(r),
+		}
+		s.render(w, r, "userSignUp.tmpl", http.StatusOK, form)
 	})
 }
 
 func (s Server) getLoginHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s.render(w, r, "login.tmpl", http.StatusOK, nil)
+		form := loginForm{
+			CsrfToken: s.csrfToken(r),
+		}
+		s.render(w, r, "login.tmpl", http.StatusOK, form)
 	})
 }
 
@@ -42,16 +50,17 @@ func (s Server) postUserSignUpHandler() http.Handler {
 		}
 
 		var (
-			name     = r.PostForm.Get("name")
+			name     = r.PostForm.Get("userName")
 			password = r.PostForm.Get("password")
 			email    = r.PostForm.Get("email")
 		)
 		form := userSignUpForm{
-			Name:  name,
-			Email: email,
+			Name:      name,
+			Email:     email,
+			CsrfToken: s.csrfToken(r),
 		}
 
-		form.NotBlank("Name", name)
+		form.NotBlank("userName", name)
 		form.NotBlank("Email", email)
 		form.NotBlank("Password", password)
 		form.ValidEmail("Email", email)
@@ -105,7 +114,8 @@ func (s Server) postLoginHandler() http.Handler {
 		)
 
 		form := loginForm{
-			Email: email,
+			Email:     email,
+			CsrfToken: s.csrfToken(r),
 		}
 		form.NotBlank("Email", email)
 		form.NotBlank("Password", password)
@@ -153,8 +163,8 @@ func (s Server) postLoginHandler() http.Handler {
 			return
 		}
 
-		s.sessionManager.Put(r.Context(), authenticatedUserId, user.Id)
-		s.sessionManager.Put(r.Context(), authenticatedUserName, user.Name)
+		s.sessionManager.Put(r.Context(), authenticatedUserIdSessionKey, user.Id)
+		s.sessionManager.Put(r.Context(), authenticatedUserNameSessionKey, user.Name)
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	})
 }
@@ -167,7 +177,7 @@ func (s Server) postLogoutHandler() http.Handler {
 			return
 		}
 
-		s.sessionManager.Remove(r.Context(), authenticatedUserId)
+		s.sessionManager.Remove(r.Context(), authenticatedUserIdSessionKey)
 		s.sessionManager.Put(r.Context(), "flash", "You've been logged out successfully!")
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	})

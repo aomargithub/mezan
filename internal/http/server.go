@@ -8,20 +8,20 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/aomargithub/mezan/internal/db"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/justinas/nosurf"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime/debug"
-	"strings"
 	"time"
 )
 
 type contextKey string
 
-const authenticatedUserId = "authenticatedUserId"
-const authenticatedUserName = "authenticatedUserName"
+const authenticatedUserIdSessionKey = "authenticatedUserIdSessionKey"
+const authenticatedUserNameSessionKey = "authenticatedUserNameSessionKey"
 const isAuthenticatedCtxKey = contextKey("isAuthenticated")
 
 type Server struct {
@@ -43,8 +43,8 @@ type Authentication struct {
 
 func (s Server) createAuthentication(r *http.Request) *Authentication {
 	if s.isAuthenticated(r) {
-		id := s.sessionManager.GetInt(r.Context(), authenticatedUserId)
-		name := s.sessionManager.GetString(r.Context(), authenticatedUserName)
+		id := s.sessionManager.GetInt(r.Context(), authenticatedUserIdSessionKey)
+		name := s.sessionManager.GetString(r.Context(), authenticatedUserNameSessionKey)
 		return &Authentication{
 			Name: name,
 			Id:   id,
@@ -53,8 +53,8 @@ func (s Server) createAuthentication(r *http.Request) *Authentication {
 	return nil
 }
 
-func (a Authentication) isAuthenticated() bool {
-	return strings.TrimSpace(a.Name) != "" || a.Id == 0
+func (s Server) csrfToken(r *http.Request) string {
+	return nosurf.Token(r)
 }
 
 func (s Server) serverError(w http.ResponseWriter, r *http.Request, err error) {
@@ -105,19 +105,19 @@ func (s *Server) registerHandlers() {
 	mux := http.NewServeMux()
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 
-	mux.Handle("GET /mezanis/{id}", s.sessionManager.LoadAndSave(s.authenticate(s.requireAuthentication(s.getMezaniHandler()))))
-	mux.Handle("GET /mezanis/create", s.sessionManager.LoadAndSave(s.authenticate(s.requireAuthentication(s.getMezaniCreateHandler()))))
-	mux.Handle("POST /mezanis/create", s.sessionManager.LoadAndSave(s.authenticate(s.requireAuthentication(s.postMezaniCreateHandler()))))
+	mux.Handle("GET /mezanis/{id}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniHandler())))))
+	mux.Handle("GET /mezanis/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniCreateHandler())))))
+	mux.Handle("POST /mezanis/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postMezaniCreateHandler())))))
 
-	mux.Handle("GET /users/signup", s.sessionManager.LoadAndSave(s.getUserSignUpHandler()))
-	mux.Handle("POST /users/signup", s.sessionManager.LoadAndSave(s.postUserSignUpHandler()))
+	mux.Handle("GET /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.getUserSignUpHandler())))
+	mux.Handle("POST /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.postUserSignUpHandler())))
 
-	mux.Handle("GET /login", s.sessionManager.LoadAndSave(s.getLoginHandler()))
-	mux.Handle("POST /login", s.sessionManager.LoadAndSave(s.postLoginHandler()))
+	mux.Handle("GET /login", s.sessionManager.LoadAndSave(s.noSurf(s.getLoginHandler())))
+	mux.Handle("POST /login", s.sessionManager.LoadAndSave(s.noSurf(s.postLoginHandler())))
 
-	mux.Handle("POST /logout", s.sessionManager.LoadAndSave(s.postLogoutHandler()))
+	mux.Handle("POST /logout", s.sessionManager.LoadAndSave(s.noSurf(s.postLogoutHandler())))
 
-	mux.Handle("GET /{$}", s.sessionManager.LoadAndSave(s.authenticate(s.requireAuthentication(s.homeHandler()))))
+	mux.Handle("GET /{$}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.homeHandler())))))
 
 	s.Mux = s.recoverPanic(s.logRequest(commonHeaders(mux)))
 }
@@ -153,7 +153,7 @@ func (s Server) logRequest(next http.Handler) http.Handler {
 
 func (s Server) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userId := s.sessionManager.GetInt(r.Context(), authenticatedUserId)
+		userId := s.sessionManager.GetInt(r.Context(), authenticatedUserIdSessionKey)
 
 		if userId == 0 {
 			next.ServeHTTP(w, r)
@@ -182,11 +182,22 @@ func (s Server) requireAuthentication(next http.Handler) http.Handler {
 		}
 
 		// Otherwise set the "Cache-Control: no-store" header so that pages
-		// require authentication are not stored in the users browser cache (or
+		// require commonFormData are not stored in the users browser cache (or
 		// other intermediary cache).
 		w.Header().Add("Cache-Control", "no-store")
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s Server) noSurf(next http.Handler) http.Handler {
+	csrfHandler := nosurf.New(next)
+	csrfHandler.SetBaseCookie(http.Cookie{
+		HttpOnly: true,
+		Path:     "/",
+		Secure:   true,
+	})
+
+	return csrfHandler
 }
 
 func (s Server) isAuthenticated(r *http.Request) bool {

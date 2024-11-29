@@ -1,6 +1,7 @@
 {{define "title"}}Sign Up{{end}}
 {{define "main"}}
     <form action='/users/signup' method='POST'>
+        <input type='hidden' name='csrf_token' value='{{.CsrfToken}}'>
         <div>
             <label>Name:</label>
              {{with .FieldErrors.Name}}

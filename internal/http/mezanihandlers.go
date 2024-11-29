@@ -12,22 +12,26 @@ type mezaniCreateForm struct {
 	Name string
 	Validator
 	*Authentication
+	CsrfToken string
 }
 
 type mezaniView struct {
 	Mezani domain.Mezani
 	*Authentication
+	CsrfToken string
 }
 
 type homeView struct {
 	Mezanis []domain.Mezani
 	*Authentication
+	CsrfToken string
 }
 
 func (s Server) getMezaniCreateHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mezaniCreateForm := mezaniCreateForm{
 			Authentication: s.createAuthentication(r),
+			CsrfToken:      s.csrfToken(r),
 		}
 		s.render(w, r, "mezaniCreate.tmpl", http.StatusOK, mezaniCreateForm)
 	})
@@ -46,14 +50,15 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 		mezaniCreateForm := mezaniCreateForm{
 			Name:           name,
 			Authentication: s.createAuthentication(r),
+			CsrfToken:      s.csrfToken(r),
 		}
 
-		mezaniCreateForm.NotBlank("Name", name)
+		mezaniCreateForm.NotBlank("userName", name)
 		if !mezaniCreateForm.Valid() {
 			s.render(w, r, "mezaniCreate.tmpl", http.StatusOK, mezaniCreateForm)
 			return
 		}
-		userId := s.sessionManager.GetInt(r.Context(), authenticatedUserId)
+		userId := s.sessionManager.GetInt(r.Context(), authenticatedUserIdSessionKey)
 		mezani := domain.Mezani{
 			Name:      name,
 			CreatorId: userId,
@@ -99,6 +104,7 @@ func (s Server) getMezaniHandler() http.Handler {
 		view := mezaniView{
 			Mezani:         mezani,
 			Authentication: s.createAuthentication(r),
+			CsrfToken:      s.csrfToken(r),
 		}
 		s.render(w, r, "mezaniView.tmpl", http.StatusOK, view)
 	})
@@ -120,6 +126,7 @@ func (s Server) homeHandler() http.Handler {
 		view := homeView{
 			Mezanis:        mezanis,
 			Authentication: s.createAuthentication(r),
+			CsrfToken:      s.csrfToken(r),
 		}
 		s.render(w, r, "home.tmpl", http.StatusOK, view)
 	})

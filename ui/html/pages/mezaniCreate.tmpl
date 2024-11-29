@@ -1,6 +1,7 @@
 {{define "title"}}Create Mezani{{end}}
 {{define "main"}}
     <form action='/mezanis/create' method='POST'>
+        <input type='hidden' name='csrf_token' value='{{.CsrfToken}}'>
         <div>
             <label>Name:</label>
              {{with .FieldErrors.Name}}

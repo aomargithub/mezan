@@ -23,7 +23,6 @@ func (s MezaniService) Create(mezani domain.Mezani) error {
 }
 
 func (s MezaniService) Get(id int) (domain.Mezani, error) {
-
 	var mezani domain.Mezani
 	stmt := `select id, name, created_at from mezanis where id = $1`
 	row := s.DB.QueryRow(stmt, id)
@@ -40,7 +39,6 @@ func (s MezaniService) Get(id int) (domain.Mezani, error) {
 }
 
 func (s MezaniService) GetAll() ([]domain.Mezani, error) {
-
 	var mezanis []domain.Mezani
 	stmt := `select id, name, created_at from mezanis`
 	rows, err := s.DB.Query(stmt)

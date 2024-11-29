@@ -7,9 +7,10 @@
             {{end}}
         </div>
         <div>
-            {{with .Authentication}}
-                Welcome {{.Name}}
+            {{if .Authentication}}
+                Welcome {{.Authentication.Name}}
                 <form action="/logout" method="post">
+                    <input type='hidden' name='csrf_token' value='{{.CsrfToken}}'>
                     <button>Logout</button>
                 </form>
             {{else}}
