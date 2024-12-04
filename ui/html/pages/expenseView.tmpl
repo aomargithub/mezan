@@ -1,0 +1,98 @@
+{{define "title"}} Expense {{.Name}} {{end}}
+
+{{define "main"}}
+    {{with .Expense}}
+        <table>
+            <tr>
+                <td>
+                    Id
+                </td>
+                <td>
+                    {{.Id}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Name
+                </td>
+                <td>
+                    {{.Name}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Created By
+                </td>
+                <td>
+                    {{.Creator.Name}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Total Amount
+                </td>
+                <td>
+                    {{.TotalAmount}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Settled Amount
+                </td>
+                <td>
+                    {{.SettledAmount}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Created On
+                </td>
+                <td>
+                    {{.CreatedAt}}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                        <table>
+                            <tr>
+                                <td>
+                                    Name
+                                </td>
+                                <td>
+                                    Quantity
+                                </td>
+                                <td>
+                                    Price
+                                </td>
+                                <td>
+                                    Total
+                                </td>
+                                <td>
+                                    Settled
+                                </td>
+                            </tr>
+                            {{range .Items}}
+                                <tr>
+                                    <td>
+                                        <a href="/expenses/{{.Id}}"> {{.Name}} </href>
+                                    </td>
+                                    <td>
+                                        {{.Quantity}}
+                                    </td>
+                                    <td>
+                                        {{.Amount}}
+                                    </td>
+                                    <td>
+                                        {{.TotalAmount}}
+                                    </td>
+                                    <td>
+                                        {{.SettledAmount}}
+                                    </td>
+                                </tr>
+                            {{end}}
+                        </table>
+                </td>
+            </tr>
+        </table>
+    {{end}}
+{{end}}

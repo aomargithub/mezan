@@ -5,13 +5,14 @@ import (
 )
 
 type Mezani struct {
-	Id             int
-	Name           string
-	CreatorId      int
-	TotalAmount    float32
-	SettledPercent float32
-	LastUpdatedAt  time.Time
-	CreatedAt      time.Time
+	Id            int
+	Name          string
+	Creator       User
+	TotalAmount   float32
+	SettledAmount float32
+	LastUpdatedAt time.Time
+	CreatedAt     time.Time
+	Expenses      []Expense
 }
 
 type User struct {
@@ -19,4 +20,30 @@ type User struct {
 	Name      string
 	Email     string
 	CreatedAt time.Time
+}
+
+type Expense struct {
+	Id            int
+	Name          string
+	Creator       User
+	Mezani        Mezani
+	TotalAmount   float32
+	SettledAmount float32
+	LastUpdatedAt time.Time
+	CreatedAt     time.Time
+	Items         []ExpenseItem
+}
+
+type ExpenseItem struct {
+	Id            int
+	Name          string
+	Creator       User
+	Mezani        Mezani
+	Amount        float32
+	TotalAmount   float32
+	SettledAmount float32
+	LastUpdatedAt time.Time
+	CreatedAt     time.Time
+	Expense       Expense
+	Quantity      int
 }

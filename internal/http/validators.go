@@ -34,6 +34,12 @@ func (v *Validator) NotBlank(key, value string) {
 	}
 }
 
+func (v *Validator) NotNegative(key string, value float32) {
+	if value < 0 {
+		v.AddFieldError(key, fmt.Sprintf("%s cannot be less than zero", key))
+	}
+}
+
 func (v *Validator) MaxChars(key, value string, n int) {
 	if utf8.RuneCountInString(value) > n {
 		v.AddFieldError(key, fmt.Sprintf("%s cannot be more than %d characters long", key, n))

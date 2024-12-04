@@ -1,6 +1,8 @@
 package http
 
 import (
+	"errors"
+	"github.com/aomargithub/mezan/internal/db"
 	"net/http"
 	"strconv"
 	"time"
@@ -53,15 +55,17 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 			CsrfToken:      s.csrfToken(r),
 		}
 
-		mezaniCreateForm.NotBlank("userName", name)
+		mezaniCreateForm.NotBlank("Name", name)
 		if !mezaniCreateForm.Valid() {
-			s.render(w, r, "mezaniCreate.tmpl", http.StatusOK, mezaniCreateForm)
+			s.render(w, r, "mezaniCreate.tmpl", http.StatusBadRequest, mezaniCreateForm)
 			return
 		}
 		userId := s.sessionManager.GetInt(r.Context(), authenticatedUserIdSessionKey)
 		mezani := domain.Mezani{
-			Name:      name,
-			CreatorId: userId,
+			Name: name,
+			Creator: domain.User{
+				Id: userId,
+			},
 			CreatedAt: time.Now(),
 		}
 
@@ -82,7 +86,7 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 	})
 }
 
-func (s Server) getMezaniHandler() http.Handler {
+func (s Server) getMezaniViewHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mezaniId, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
@@ -98,6 +102,10 @@ func (s Server) getMezaniHandler() http.Handler {
 		mezani, err := s.mezaniService.Get(mezaniId)
 		defer tx.Rollback()
 		if err != nil {
+			if errors.Is(err, db.ErrNoRecord) {
+				http.Redirect(w, r, "/", http.StatusNotFound)
+				return
+			}
 			s.serverError(w, r, err)
 			return
 		}

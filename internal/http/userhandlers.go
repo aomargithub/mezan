@@ -50,7 +50,7 @@ func (s Server) postUserSignUpHandler() http.Handler {
 		}
 
 		var (
-			name     = r.PostForm.Get("userName")
+			name     = r.PostForm.Get("name")
 			password = r.PostForm.Get("password")
 			email    = r.PostForm.Get("email")
 		)
@@ -60,7 +60,7 @@ func (s Server) postUserSignUpHandler() http.Handler {
 			CsrfToken: s.csrfToken(r),
 		}
 
-		form.NotBlank("userName", name)
+		form.NotBlank("Name", name)
 		form.NotBlank("Email", email)
 		form.NotBlank("Password", password)
 		form.ValidEmail("Email", email)

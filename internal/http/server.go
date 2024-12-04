@@ -33,6 +33,7 @@ type Server struct {
 	sessionManager *scs.SessionManager
 	mezaniService  db.MezaniService
 	userService    db.UserService
+	expenseService db.ExpenseService
 	templates      map[string]*template.Template
 }
 
@@ -75,6 +76,10 @@ func (s *Server) initServices() {
 	s.userService = db.UserService{
 		DB: s.DB,
 	}
+
+	s.expenseService = db.ExpenseService{
+		DB: s.DB,
+	}
 }
 
 func (s *Server) initTemplateCache() {
@@ -105,9 +110,12 @@ func (s *Server) registerHandlers() {
 	mux := http.NewServeMux()
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 
-	mux.Handle("GET /mezanis/{id}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniHandler())))))
+	mux.Handle("GET /mezanis/{id}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniViewHandler())))))
 	mux.Handle("GET /mezanis/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniCreateHandler())))))
 	mux.Handle("POST /mezanis/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postMezaniCreateHandler())))))
+	mux.Handle("GET /mezanis/{mezaniId}/expenses/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseCreateHandler())))))
+	mux.Handle("POST /mezanis/{mezaniId}/expenses/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postExpenseCreateHandler())))))
+	mux.Handle("GET /expenses/{expenseId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseViewHandler())))))
 
 	mux.Handle("GET /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.getUserSignUpHandler())))
 	mux.Handle("POST /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.postUserSignUpHandler())))

@@ -1,0 +1,24 @@
+{{define "title"}}Add Expense{{end}}
+{{define "main"}}
+    <form action='/mezanis/{{.MezaniId}}/expenses/create' method='POST'>
+        <input type='hidden' name='csrf_token' value='{{.CsrfToken}}'>
+        <div>
+            <label>Name:</label>
+             {{with .FieldErrors.Name}}
+                <label class='error'>{{.}}</label>
+             {{end}}
+            <input type='text' name='name' value='{{.Name}}'>
+        </div>
+        <div>
+            <label>TotalAmount:</label>
+             {{with .FieldErrors.TotalAmount}}
+                <label class='error'>{{.}}</label>
+            {{end}}
+            <input type='text' name='totalAmount' value='{{.TotalAmount}}'>
+        </div>
+
+        <div>
+            <input type='submit' value='Add'>
+        </div>
+    </form>
+{{end}}

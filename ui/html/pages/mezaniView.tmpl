@@ -4,27 +4,55 @@
     {{with .Mezani}}
         <table>
             <tr>
-                <td>
-                    Id
-                </td>
-                <td>
-                    {{.Id}}
+                <td>Id</td>
+                <td>{{.Id}}</td>
+            </tr>
+            <tr>
+                <td>Name</td>
+                <td>{{.Name}}</td>
+            </tr>
+            <tr>
+                <td>Total Amount</td>
+                <td>{{.TotalAmount}}</td>
+            </tr>
+            <tr>
+                <td>Settled Amount</td>
+                <td>{{.SettledAmount}}</td>
+            </tr>
+            <tr>
+                <td>Created By</td>
+                <td>{{.Creator.Name}}</td>
+            </tr>
+            <tr>
+                <td>Created On</td>
+                <td>{{.CreatedAt}}</td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <a href="/mezanis/{{.Id}}/expenses/create">Add expense</a>
                 </td>
             </tr>
             <tr>
-                <td>
-                    Name
-                </td>
-                <td>
-                    {{.Name}}
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    Created On
-                </td>
-                <td>
-                    {{.CreatedAt}}
+                <td colspan="2">
+                    Expenses
+                    <table>
+                        <tr>
+                            <td>Name</td>
+                            <td>Created By</td>
+                            <td>Total Amount</td>
+                            <td>Settled Amount</td>
+                            <td>Created On</td>
+                        </tr>
+                        {{range .Expenses}}
+                            <tr>
+                                <td><a href="/expenses/{{.Id}}">{{.Name}}<a></td>
+                                <td>{{.Creator.Name}}</td>
+                                <td>{{.TotalAmount}}</td>
+                                <td>{{.SettledAmount}}</td>
+                                <td>{{.CreatedAt}}</td>
+                            </tr>
+                        {{end}}
+                    </table>
                 </td>
             </tr>
         </table>
