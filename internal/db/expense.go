@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/aomargithub/mezan/internal/domain"
 )
 
@@ -29,7 +30,7 @@ func (e ExpenseService) Get(id int) (domain.Expense, error) {
 				   COALESCE(ei.settled_amount, 0) as item_settled_amount,
 				   COALESCE(ei.amount, 0)         as item_amount,
 				   COALESCE(ei.total_amount, 0)   as item_total_amount,
-				   COALESCE(ei.quantity, 0)       as item_quantaty
+				   COALESCE(ei.quantity, 0)       as item_quantity
 			from expenses e
 					 join users u1 on u1.id = e.creator_id
 					 left outer join expense_items ei on ei.expense_id = e.id
@@ -72,6 +73,21 @@ func (e ExpenseService) Get(id int) (domain.Expense, error) {
 		return domain.Expense{}, ErrNoRecord
 	}
 	return expense, nil
+}
+
+func (e ExpenseService) GetMezaniId(expenseId int) (int, error) {
+	stmt := " select mezani_id from expenses where id = $1"
+
+	r := e.DB.QueryRow(stmt, expenseId)
+	var mezaniId int
+	err := r.Scan(&mezaniId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, ErrNoRecord
+		}
+		return 0, err
+	}
+	return mezaniId, nil
 }
 
 func (e ExpenseService) Settle(expenseId int, amount float32) error {

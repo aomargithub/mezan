@@ -68,7 +68,7 @@ create table expense_items
   expense_id integer not null references expenses(id),
   mezani_id integer not null references mezanis(id),
   creator_id integer not null references users(id),
-  quantity int DEFAULT 1,
+  quantity float not null,
   CONSTRAINT unique_item_name_per_expense UNIQUE (name, expense_id)
 ); 
 --rollback drop table expense_items;

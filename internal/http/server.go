@@ -25,16 +25,17 @@ const authenticatedUserNameSessionKey = "authenticatedUserNameSessionKey"
 const isAuthenticatedCtxKey = contextKey("isAuthenticated")
 
 type Server struct {
-	Mux            http.Handler
-	StaticDir      string
-	Logger         *slog.Logger
-	DSN            string
-	DB             *sql.DB
-	sessionManager *scs.SessionManager
-	mezaniService  db.MezaniService
-	userService    db.UserService
-	expenseService db.ExpenseService
-	templates      map[string]*template.Template
+	Mux                http.Handler
+	StaticDir          string
+	Logger             *slog.Logger
+	DSN                string
+	DB                 *sql.DB
+	sessionManager     *scs.SessionManager
+	mezaniService      db.MezaniService
+	userService        db.UserService
+	expenseService     db.ExpenseService
+	expenseItemService db.ExpenseItemService
+	templates          map[string]*template.Template
 }
 
 type Authentication struct {
@@ -80,6 +81,9 @@ func (s *Server) initServices() {
 	s.expenseService = db.ExpenseService{
 		DB: s.DB,
 	}
+	s.expenseItemService = db.ExpenseItemService{
+		DB: s.DB,
+	}
 }
 
 func (s *Server) initTemplateCache() {
@@ -116,6 +120,8 @@ func (s *Server) registerHandlers() {
 	mux.Handle("GET /mezanis/{mezaniId}/expenses/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseCreateHandler())))))
 	mux.Handle("POST /mezanis/{mezaniId}/expenses/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postExpenseCreateHandler())))))
 	mux.Handle("GET /expenses/{expenseId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseViewHandler())))))
+	mux.Handle("GET /expenses/{expenseId}/items/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemCreateHandler())))))
+	mux.Handle("POST /expenses/{expenseId}/items/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postExpenseItemCreateHandler())))))
 
 	mux.Handle("GET /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.getUserSignUpHandler())))
 	mux.Handle("POST /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.postUserSignUpHandler())))

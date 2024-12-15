@@ -45,5 +45,5 @@ type ExpenseItem struct {
 	LastUpdatedAt time.Time
 	CreatedAt     time.Time
 	Expense       Expense
-	Quantity      int
+	Quantity      float32
 }

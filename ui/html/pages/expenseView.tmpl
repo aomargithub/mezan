@@ -51,25 +51,21 @@
                     {{.CreatedAt}}
                 </td>
             </tr>
+                <tr>
+                    <td colspan="2">
+                        <a href="/expenses/{{.Id}}/items/create">Add Item</a>
+                    </td>
+                </tr>
             <tr>
                 <td colspan="2">
+                        Items
                         <table>
                             <tr>
-                                <td>
-                                    Name
-                                </td>
-                                <td>
-                                    Quantity
-                                </td>
-                                <td>
-                                    Price
-                                </td>
-                                <td>
-                                    Total
-                                </td>
-                                <td>
-                                    Settled
-                                </td>
+                                <td>Name</td>
+                                <td>Quantity</td>
+                                <td>Price</td>
+                                <td>Total</td>
+                                <td>Settled</td>
                             </tr>
                             {{range .Items}}
                                 <tr>

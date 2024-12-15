@@ -1,0 +1,40 @@
+{{define "title"}}Add expense item {{end}}
+{{define "main"}}
+    <form action='/expenses/{{.ExpenseId}}/items/create' method='POST'>
+        <input type='hidden' name='csrf_token' value='{{.CsrfToken}}'>
+        <input type='hidden' name='mezaniId' value='{{.MezaniId}}'>
+        <div>
+            <label>Name:</label>
+             {{with .FieldErrors.Name}}
+                <label class='error'>{{.}}</label>
+             {{end}}
+            <input type='text' name='name' value='{{.Name}}'>
+        </div>
+        <div>
+            <label>Amount:</label>
+             {{with .FieldErrors.Amount}}
+                <label class='error'>{{.}}</label>
+            {{end}}
+            <input type='text' name='amount' id="amount" value='{{.Amount}}'>
+        </div>
+        <div>
+             <label>Quantity:</label>
+              {{with .FieldErrors.Quantity}}
+                 <label class='error'>{{.}}</label>
+             {{end}}
+             <input type='text' name='quantity' id="quantity" value='{{.Quantity}}'>
+         </div>
+        <div>
+            <label>TotalAmount:</label>
+             {{with .FieldErrors.TotalAmount}}
+                <label class='error'>{{.}}</label>
+            {{end}}
+            <input type='text' name='totalAmount'  id="totalAmount" value='{{.TotalAmount}}'>
+        </div>
+
+        <div>
+            <input type='submit' value='Add'>
+        </div>
+    </form>
+    <script src='/static/js/add-expense-item.js' type='text/javascript'></script>
+{{end}}
