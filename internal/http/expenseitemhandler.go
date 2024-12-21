@@ -17,9 +17,7 @@ type expenseItemCreateForm struct {
 	TotalAmount float32
 	Quantity    float32
 	Amount      float32
-	CsrfToken   string
-	Validator
-	*Authentication
+	CommonCreateView
 }
 
 func (s Server) getExpenseItemCreateHandler() http.Handler {
@@ -39,10 +37,9 @@ func (s Server) getExpenseItemCreateHandler() http.Handler {
 			return
 		}
 		expenseItemCreateForm := expenseItemCreateForm{
-			ExpenseId:      expenseId,
-			MezaniId:       mezaniId,
-			CsrfToken:      s.csrfToken(r),
-			Authentication: s.createAuthentication(r),
+			ExpenseId:        expenseId,
+			MezaniId:         mezaniId,
+			CommonCreateView: s.commonCreateView(r),
 		}
 		s.render(w, r, "expenseItemCreate.tmpl", http.StatusOK, expenseItemCreateForm)
 	})
@@ -91,14 +88,13 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 		}
 
 		expenseItemCreateForm := expenseItemCreateForm{
-			Name:           name,
-			ExpenseId:      expenseId,
-			MezaniId:       mezaniId,
-			Amount:         amount,
-			TotalAmount:    totalAmount,
-			Quantity:       quantity,
-			CsrfToken:      s.csrfToken(r),
-			Authentication: s.createAuthentication(r),
+			Name:             name,
+			ExpenseId:        expenseId,
+			MezaniId:         mezaniId,
+			Amount:           amount,
+			TotalAmount:      totalAmount,
+			Quantity:         quantity,
+			CommonCreateView: s.commonCreateView(r),
 		}
 		expenseItemCreateForm.NotBlank("Name", name)
 		expenseItemCreateForm.NotNegative("TotalAmount", totalAmount)
@@ -119,11 +115,23 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 			Quantity:    quantity,
 			Expense:     domain.Expense{Id: expenseId},
 		}
+		tx, err := s.DB.Begin()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		defer s.rollback(tx)
 		err = s.expenseItemService.Create(expenseItem)
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
-		http.Redirect(w, r, fmt.Sprintf("/expenses/%d", expenseId), http.StatusOK)
+		err = tx.Commit()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		s.sessionManager.Put(r.Context(), "flash", "Item successfully created!")
+		http.Redirect(w, r, fmt.Sprintf("/expenses/%d", expenseId), http.StatusSeeOther)
 	})
 }

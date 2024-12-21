@@ -43,6 +43,31 @@ type Authentication struct {
 	Id   int
 }
 
+type CommonView struct {
+	CsrfToken string
+	*Authentication
+	Flash string
+}
+
+type CommonCreateView struct {
+	CommonView
+	Validator
+}
+
+func (s Server) commonView(r *http.Request) CommonView {
+	return CommonView{
+		CsrfToken:      s.csrfToken(r),
+		Authentication: s.createAuthentication(r),
+		Flash:          s.sessionManager.PopString(r.Context(), "flash"),
+	}
+}
+
+func (s Server) commonCreateView(r *http.Request) CommonCreateView {
+	return CommonCreateView{
+		CommonView: s.commonView(r),
+	}
+}
+
 func (s Server) createAuthentication(r *http.Request) *Authentication {
 	if s.isAuthenticated(r) {
 		id := s.sessionManager.GetInt(r.Context(), authenticatedUserIdSessionKey)
@@ -248,6 +273,10 @@ func (s Server) render(w http.ResponseWriter, r *http.Request, page string, http
 	}
 }
 
+func (s Server) rollback(tx *sql.Tx) {
+	_ = tx.Rollback()
+}
+
 func (s *Server) initSessionManager() {
 	sessionManager := scs.New()
 	sessionManager.Store = postgresstore.New(s.DB)
@@ -257,19 +286,19 @@ func (s *Server) initSessionManager() {
 }
 
 func (s *Server) initDB() {
-	db, err := sql.Open("pgx", s.DSN)
+	database, err := sql.Open("pgx", s.DSN)
 	if err != nil {
 		s.Logger.Error(err.Error())
 		os.Exit(1)
 	}
 
-	err = db.Ping()
+	err = database.Ping()
 	if err != nil {
-		db.Close()
+		_ = database.Close()
 		s.Logger.Error(err.Error())
 		os.Exit(1)
 	}
-	s.DB = db
+	s.DB = database
 }
 
 func (s *Server) initLogger() {

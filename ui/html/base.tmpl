@@ -15,6 +15,9 @@
         </header>
         {{block "nav" .}}
         {{end}}
+        {{with .Flash}}
+            <div class='flash'>{{.}}</div>
+        {{end}}
         <main>
             {{template "main" .}}
         </main>

@@ -12,28 +12,23 @@ import (
 
 type mezaniCreateForm struct {
 	Name string
-	Validator
-	*Authentication
-	CsrfToken string
+	CommonCreateView
 }
 
 type mezaniView struct {
 	Mezani domain.Mezani
-	*Authentication
-	CsrfToken string
+	CommonView
 }
 
 type homeView struct {
 	Mezanis []domain.Mezani
-	*Authentication
-	CsrfToken string
+	CommonView
 }
 
 func (s Server) getMezaniCreateHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mezaniCreateForm := mezaniCreateForm{
-			Authentication: s.createAuthentication(r),
-			CsrfToken:      s.csrfToken(r),
+			CommonCreateView: s.commonCreateView(r),
 		}
 		s.render(w, r, "mezaniCreate.tmpl", http.StatusOK, mezaniCreateForm)
 	})
@@ -50,9 +45,8 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 		name := r.PostForm.Get("name")
 
 		mezaniCreateForm := mezaniCreateForm{
-			Name:           name,
-			Authentication: s.createAuthentication(r),
-			CsrfToken:      s.csrfToken(r),
+			Name:             name,
+			CommonCreateView: s.commonCreateView(r),
 		}
 
 		mezaniCreateForm.NotBlank("Name", name)
@@ -72,15 +66,15 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 		tx, err := s.DB.Begin()
 		if err != nil {
 			s.serverError(w, r, err)
-			defer tx.Rollback()
 			return
 		}
+		defer s.rollback(tx)
 		err = s.mezaniService.Create(mezani)
-		defer tx.Rollback()
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
+		_ = tx.Commit()
 		s.sessionManager.Put(r.Context(), "flash", "Mezania successfully created!")
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	})
@@ -94,13 +88,13 @@ func (s Server) getMezaniViewHandler() http.Handler {
 			return
 		}
 
-		tx, err := s.mezaniService.DB.Begin()
+		tx, err := s.DB.Begin()
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
+		defer s.rollback(tx)
 		mezani, err := s.mezaniService.Get(mezaniId)
-		defer tx.Rollback()
 		if err != nil {
 			if errors.Is(err, db.ErrNoRecord) {
 				http.Redirect(w, r, "/", http.StatusNotFound)
@@ -109,10 +103,10 @@ func (s Server) getMezaniViewHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
+		_ = tx.Commit()
 		view := mezaniView{
-			Mezani:         mezani,
-			Authentication: s.createAuthentication(r),
-			CsrfToken:      s.csrfToken(r),
+			Mezani:     mezani,
+			CommonView: s.commonView(r),
 		}
 		s.render(w, r, "mezaniView.tmpl", http.StatusOK, view)
 	})
@@ -120,21 +114,21 @@ func (s Server) getMezaniViewHandler() http.Handler {
 
 func (s Server) homeHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tx, err := s.mezaniService.DB.Begin()
+		tx, err := s.DB.Begin()
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
+		defer s.rollback(tx)
 		mezanis, err := s.mezaniService.GetAll()
-		defer tx.Rollback()
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
+		_ = tx.Commit()
 		view := homeView{
-			Mezanis:        mezanis,
-			Authentication: s.createAuthentication(r),
-			CsrfToken:      s.csrfToken(r),
+			Mezanis:    mezanis,
+			CommonView: s.commonView(r),
 		}
 		s.render(w, r, "home.tmpl", http.StatusOK, view)
 	})

@@ -14,15 +14,12 @@ type expenseCreateForm struct {
 	MezaniId    int
 	Name        string
 	TotalAmount float32
-	CsrfToken   string
-	Validator
-	*Authentication
+	CommonCreateView
 }
 
 type expenseView struct {
 	Expense domain.Expense
-	*Authentication
-	CsrfToken string
+	CommonView
 }
 
 func (s Server) getExpenseCreateHandler() http.Handler {
@@ -33,9 +30,8 @@ func (s Server) getExpenseCreateHandler() http.Handler {
 			return
 		}
 		expenseCreateForm := expenseCreateForm{
-			MezaniId:       mezaniId,
-			CsrfToken:      s.csrfToken(r),
-			Authentication: s.createAuthentication(r),
+			MezaniId:         mezaniId,
+			CommonCreateView: s.commonCreateView(r),
 		}
 		s.render(w, r, "expenseCreate.tmpl", http.StatusOK, expenseCreateForm)
 	})
@@ -64,11 +60,10 @@ func (s Server) postExpenseCreateHandler() http.Handler {
 
 		totalAmount := float32(totalAmount64)
 		expenseCreateForm := expenseCreateForm{
-			MezaniId:       mezaniId,
-			Name:           name,
-			TotalAmount:    totalAmount,
-			CsrfToken:      s.csrfToken(r),
-			Authentication: s.createAuthentication(r),
+			MezaniId:         mezaniId,
+			Name:             name,
+			TotalAmount:      totalAmount,
+			CommonCreateView: s.commonCreateView(r),
 		}
 		expenseCreateForm.NotBlank("Name", name)
 		expenseCreateForm.NotNegative("TotalAmount", totalAmount)
@@ -88,23 +83,22 @@ func (s Server) postExpenseCreateHandler() http.Handler {
 
 		tx, err := s.DB.Begin()
 		if err != nil {
-			defer tx.Rollback()
 			s.serverError(w, r, err)
 			return
 		}
+		defer s.rollback(tx)
 		err = s.expenseService.Create(expense)
-		defer tx.Rollback()
 		if err != nil {
-			tx.Rollback()
 			s.serverError(w, r, err)
 			return
 		}
 		err = s.mezaniService.AddExpense(mezaniId, expense.TotalAmount)
 		if err != nil {
-			tx.Rollback()
 			s.serverError(w, r, err)
 			return
 		}
+		_ = tx.Commit()
+		s.sessionManager.Put(r.Context(), "flash", "Expense successfully created!")
 		http.Redirect(w, r, fmt.Sprintf("/mezanis/%d", mezaniId), http.StatusSeeOther)
 	})
 }
@@ -121,8 +115,8 @@ func (s Server) getExpenseViewHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
+		defer s.rollback(tx)
 		expense, err := s.expenseService.Get(expenseId)
-		defer tx.Rollback()
 		if err != nil {
 			if errors.Is(err, db.ErrNoRecord) {
 				http.Redirect(w, r, "/", http.StatusNotFound)
@@ -131,10 +125,10 @@ func (s Server) getExpenseViewHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
+		_ = tx.Commit()
 		view := expenseView{
-			Expense:        expense,
-			Authentication: s.createAuthentication(r),
-			CsrfToken:      s.csrfToken(r),
+			Expense:    expense,
+			CommonView: s.commonView(r),
 		}
 		s.render(w, r, "expenseView.tmpl", http.StatusOK, view)
 	})

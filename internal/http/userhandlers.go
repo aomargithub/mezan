@@ -10,24 +10,24 @@ import (
 )
 
 type userSignUpForm struct {
-	Name      string
-	Email     string
-	CsrfToken string
-	*Authentication
-	Validator
+	Name  string
+	Email string
+	CommonCreateView
 }
 
 type loginForm struct {
 	Email string
-	Validator
-	*Authentication
-	CsrfToken string
+	CommonCreateView
 }
 
 func (s Server) getUserSignUpHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		form := userSignUpForm{
-			CsrfToken: s.csrfToken(r),
+			CommonCreateView: CommonCreateView{
+				CommonView: CommonView{
+					CsrfToken: s.csrfToken(r),
+				},
+			},
 		}
 		s.render(w, r, "userSignUp.tmpl", http.StatusOK, form)
 	})
@@ -36,7 +36,12 @@ func (s Server) getUserSignUpHandler() http.Handler {
 func (s Server) getLoginHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		form := loginForm{
-			CsrfToken: s.csrfToken(r),
+			CommonCreateView: CommonCreateView{
+				CommonView: CommonView{
+					CsrfToken: s.csrfToken(r),
+					Flash:     s.sessionManager.PopString(r.Context(), "flash"),
+				},
+			},
 		}
 		s.render(w, r, "login.tmpl", http.StatusOK, form)
 	})
@@ -55,9 +60,13 @@ func (s Server) postUserSignUpHandler() http.Handler {
 			email    = r.PostForm.Get("email")
 		)
 		form := userSignUpForm{
-			Name:      name,
-			Email:     email,
-			CsrfToken: s.csrfToken(r),
+			Name:  name,
+			Email: email,
+			CommonCreateView: CommonCreateView{
+				CommonView: CommonView{
+					CsrfToken: s.csrfToken(r),
+				},
+			},
 		}
 
 		form.NotBlank("Name", name)
@@ -83,11 +92,10 @@ func (s Server) postUserSignUpHandler() http.Handler {
 		tx, err := s.DB.Begin()
 		if err != nil {
 			s.serverError(w, r, err)
-			defer tx.Rollback()
 			return
 		}
+		s.rollback(tx)
 		err = s.userService.Create(user, string(hashedPassword))
-		defer tx.Rollback()
 		if err != nil {
 			if errors.Is(err, db.ErrDuplicateEmail) {
 				form.AddFieldError("Email", "Email address is already in use")
@@ -97,6 +105,7 @@ func (s Server) postUserSignUpHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
+		_ = tx.Commit()
 		s.render(w, r, "userSignUp.tmpl", http.StatusOK, nil)
 	})
 }
@@ -114,8 +123,12 @@ func (s Server) postLoginHandler() http.Handler {
 		)
 
 		form := loginForm{
-			Email:     email,
-			CsrfToken: s.csrfToken(r),
+			Email: email,
+			CommonCreateView: CommonCreateView{
+				CommonView: CommonView{
+					CsrfToken: s.csrfToken(r),
+				},
+			},
 		}
 		form.NotBlank("Email", email)
 		form.NotBlank("Password", password)
@@ -128,9 +141,9 @@ func (s Server) postLoginHandler() http.Handler {
 		tx, err := s.DB.Begin()
 		if err != nil {
 			s.serverError(w, r, err)
-			defer tx.Rollback()
 			return
 		}
+		defer s.rollback(tx)
 		user, hp, err := s.userService.GetIdAndHashedPassword(email)
 		if err != nil {
 			if errors.Is(err, db.ErrNoRecord) {
@@ -151,7 +164,6 @@ func (s Server) postLoginHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		defer tx.Rollback()
 		if err != nil {
 			s.serverError(w, r, err)
 			return
@@ -165,6 +177,7 @@ func (s Server) postLoginHandler() http.Handler {
 
 		s.sessionManager.Put(r.Context(), authenticatedUserIdSessionKey, user.Id)
 		s.sessionManager.Put(r.Context(), authenticatedUserNameSessionKey, user.Name)
+		_ = tx.Commit()
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	})
 }
