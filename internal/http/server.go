@@ -35,6 +35,7 @@ type Server struct {
 	userService        db.UserService
 	expenseService     db.ExpenseService
 	expenseItemService db.ExpenseItemService
+	membershipService  db.MembershipService
 	templates          map[string]*template.Template
 }
 
@@ -107,6 +108,9 @@ func (s *Server) initServices() {
 		DB: s.DB,
 	}
 	s.expenseItemService = db.ExpenseItemService{
+		DB: s.DB,
+	}
+	s.membershipService = db.MembershipService{
 		DB: s.DB,
 	}
 }

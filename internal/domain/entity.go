@@ -12,6 +12,7 @@ type Mezani struct {
 	SettledAmount float32
 	LastUpdatedAt time.Time
 	CreatedAt     time.Time
+	ShareId       string
 	Expenses      []Expense
 }
 
@@ -19,6 +20,13 @@ type User struct {
 	Id        int
 	Name      string
 	Email     string
+	CreatedAt time.Time
+}
+
+type MemberShip struct {
+	Id        int
+	Mezani    Mezani
+	Member    User
 	CreatedAt time.Time
 }
 

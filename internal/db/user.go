@@ -29,7 +29,7 @@ func (s UserService) Create(user domain.User, hashedPassword string) error {
 	return nil
 }
 
-func (s UserService) GetIdAndHashedPassword(email string) (domain.User, string, error) {
+func (s UserService) GetInfoAndHashedPassword(email string) (domain.User, string, error) {
 	stmt := `select id, name, hashed_password from users where email = $1`
 	row := s.DB.QueryRow(stmt, email)
 	var (

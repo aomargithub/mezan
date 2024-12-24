@@ -23,13 +23,13 @@ create table mezanis
   creator_id integer not null references users(id),
   settled_amount float not null DEFAULT 0.00,
   total_amount float not null DEFAULT 0.00,
-  share_hash varchar(500) null,
+  share_id varchar(500) not null unique,
   CONSTRAINT unique_mezani_name_per_creator UNIQUE (creator_id, name)
 );
 --rollback drop table mezanis;
 
 --changeset aomar:3
-create table mezani_members
+create table mezani_membership
 (
     id serial not null PRIMARY KEY,
     created_at timestamp not null,
@@ -37,7 +37,7 @@ create table mezani_members
     mezani_id integer not null references mezanis(id),
     CONSTRAINT unique_member_per_mezani UNIQUE (member_id, mezani_id)
 );
---rollback drop table mezani_members;
+--rollback drop table mezani_membership;
 
 --changeset aomar:4
 create table expenses

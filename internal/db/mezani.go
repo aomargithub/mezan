@@ -7,12 +7,18 @@ import (
 
 type MezaniService struct {
 	DB *sql.DB
+	commonDB
 }
 
-func (s MezaniService) Create(mezani domain.Mezani) error {
-	stmt := `insert into mezanis (name, creator_id, created_at) values($1,$2,$3)`
-	_, err := s.DB.Exec(stmt, mezani.Name, mezani.Creator.Id, mezani.CreatedAt)
-	return err
+func (s MezaniService) Create(mezani domain.Mezani) (int, error) {
+	stmt := `insert into mezanis (name, creator_id, share_id, created_at) values($1,$2,$3,$4) returning id`
+	var id int
+	row := s.DB.QueryRow(stmt, mezani.Name, mezani.Creator.Id, mezani.ShareId, mezani.CreatedAt)
+	err := row.Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func (s MezaniService) Get(id int) (domain.Mezani, error) {
@@ -38,7 +44,7 @@ func (s MezaniService) Get(id int) (domain.Mezani, error) {
 	if err != nil {
 		return mezani, err
 	}
-	defer rows.Close()
+	defer s.close(rows)
 	for rows.Next() {
 		var expense domain.Expense
 		err = rows.Scan(&mezani.Id, &mezani.Name, &mezani.TotalAmount, &mezani.SettledAmount, &mezani.CreatedAt, &mezani.Creator.Name,
@@ -67,7 +73,7 @@ func (s MezaniService) GetAll() ([]domain.Mezani, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer s.close(rows)
 	for rows.Next() {
 		var mezani domain.Mezani
 		err := rows.Scan(&mezani.Id, &mezani.Name, &mezani.CreatedAt)

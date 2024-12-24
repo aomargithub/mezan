@@ -2,7 +2,9 @@ package http
 
 import (
 	"errors"
+	"fmt"
 	"github.com/aomargithub/mezan/internal/db"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -36,6 +38,7 @@ func (s Server) getMezaniCreateHandler() http.Handler {
 
 func (s Server) postMezaniCreateHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
 		err := r.ParseForm()
 		if err != nil {
 			s.clientError(w, http.StatusBadRequest)
@@ -55,12 +58,14 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 			return
 		}
 		userId := s.sessionManager.GetInt(r.Context(), authenticatedUserIdSessionKey)
+		userName := s.sessionManager.GetString(r.Context(), authenticatedUserNameSessionKey)
 		mezani := domain.Mezani{
 			Name: name,
 			Creator: domain.User{
 				Id: userId,
 			},
-			CreatedAt: time.Now(),
+			ShareId:   fmt.Sprintf("%s_%s_%d", userName, name, rand.Intn(1000000)+1000000),
+			CreatedAt: now,
 		}
 
 		tx, err := s.DB.Begin()
@@ -69,7 +74,21 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 			return
 		}
 		defer s.rollback(tx)
-		err = s.mezaniService.Create(mezani)
+		mezaniId, err := s.mezaniService.Create(mezani)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		memberShip := domain.MemberShip{
+			Mezani: domain.Mezani{
+				Id: mezaniId,
+			},
+			Member: domain.User{
+				Id: userId,
+			},
+			CreatedAt: now,
+		}
+		err = s.membershipService.Create(memberShip)
 		if err != nil {
 			s.serverError(w, r, err)
 			return

@@ -144,7 +144,7 @@ func (s Server) postLoginHandler() http.Handler {
 			return
 		}
 		defer s.rollback(tx)
-		user, hp, err := s.userService.GetIdAndHashedPassword(email)
+		user, hp, err := s.userService.GetInfoAndHashedPassword(email)
 		if err != nil {
 			if errors.Is(err, db.ErrNoRecord) {
 				form.AddFormError("Email or Password is incorrect")
