@@ -50,6 +50,20 @@ func (s Server) getExpenseItemCreateHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
+
+		userId, _ := s.getCurrentUserInfo(r)
+		accessible, err := s.membershipService.ExpenseAccessibleBy(expenseId, userId)
+		if !accessible {
+			params := make(map[string]string)
+			params["type"] = "Expense"
+			params["id"] = strconv.Itoa(expenseId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusForbidden, ev)
+			return
+		}
 		expenseItemCreateForm := expenseItemCreateForm{
 			ExpenseId:        expenseId,
 			MezaniId:         mezaniId,
@@ -65,6 +79,44 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 		expenseId, err := strconv.Atoi(r.PathValue("expenseId"))
 		if err != nil {
 			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+		tx, err := s.DB.Begin()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		defer s.expenseItemService.Rollback(tx)
+
+		exists, err := s.expenseService.IsExist(expenseId)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+
+		if !exists {
+			params := make(map[string]string)
+			params["type"] = "Expense"
+			params["id"] = strconv.Itoa(expenseId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusNotFound, ev)
+			return
+		}
+
+		userId, _ := s.getCurrentUserInfo(r)
+		accessible, err := s.membershipService.ExpenseAccessibleBy(expenseId, userId)
+		if !accessible {
+			params := make(map[string]string)
+			params["type"] = "Expense"
+			params["id"] = strconv.Itoa(expenseId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusForbidden, ev)
 			return
 		}
 
@@ -130,12 +182,6 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 			Quantity:    quantity,
 			Expense:     domain.Expense{Id: expenseId},
 		}
-		tx, err := s.DB.Begin()
-		if err != nil {
-			s.serverError(w, r, err)
-			return
-		}
-		defer s.expenseItemService.Rollback(tx)
 		err = s.expenseItemService.Create(expenseItem)
 		if err != nil {
 			s.serverError(w, r, err)

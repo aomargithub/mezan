@@ -91,6 +91,14 @@ func (e ExpenseService) GetMezaniId(expenseId int) (int, error) {
 	return mezaniId, nil
 }
 
+func (e ExpenseService) IsExist(expenseId int) (bool, error) {
+	var exists bool
+	stmt := `select exists (select 1 from expenses where id = $1)`
+	row := e.DB.QueryRow(stmt, expenseId)
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 func (e ExpenseService) Settle(expenseId int, amount float32) error {
 	stmt := `update expenses set settled_amount = settled_amount + $1 where id = $2`
 	_, err := e.DB.Exec(stmt, amount, expenseId)
