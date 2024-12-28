@@ -29,10 +29,48 @@ func (s Server) getExpenseCreateHandler() http.Handler {
 			s.clientError(w, http.StatusBadRequest)
 			return
 		}
+
+		tx, err := s.DB.Begin()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		defer s.expenseService.Rollback(tx)
+		exists, err := s.mezaniService.IsExist(mezaniId)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+
+		if !exists {
+			params := make(map[string]string)
+			params["type"] = "Mezani"
+			params["id"] = strconv.Itoa(mezaniId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusNotFound, ev)
+			return
+		}
+		userId, _ := s.getCurrentUserInfo(r)
+		accessible, err := s.membershipService.MezaniAccessibleBy(mezaniId, userId)
+		if !accessible {
+			params := make(map[string]string)
+			params["type"] = "Mezani"
+			params["id"] = strconv.Itoa(mezaniId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusForbidden, ev)
+			return
+		}
 		expenseCreateForm := expenseCreateForm{
 			MezaniId:         mezaniId,
 			CommonCreateView: s.commonCreateView(r),
 		}
+		_ = tx.Commit()
 		s.render(w, r, "expenseCreate.tmpl", http.StatusOK, expenseCreateForm)
 	})
 }
@@ -42,6 +80,43 @@ func (s Server) postExpenseCreateHandler() http.Handler {
 		mezaniId, err := strconv.Atoi(r.PathValue("mezaniId"))
 		if err != nil {
 			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+
+		tx, err := s.DB.Begin()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		defer s.expenseService.Rollback(tx)
+		exists, err := s.mezaniService.IsExist(mezaniId)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+
+		if !exists {
+			params := make(map[string]string)
+			params["type"] = "Mezani"
+			params["id"] = strconv.Itoa(mezaniId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusNotFound, ev)
+			return
+		}
+		userId, _ := s.getCurrentUserInfo(r)
+		accessible, err := s.membershipService.MezaniAccessibleBy(mezaniId, userId)
+		if !accessible {
+			params := make(map[string]string)
+			params["type"] = "Mezani"
+			params["id"] = strconv.Itoa(mezaniId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusForbidden, ev)
 			return
 		}
 
@@ -80,13 +155,6 @@ func (s Server) postExpenseCreateHandler() http.Handler {
 			Creator:     domain.User{Id: expenseCreateForm.Authentication.Id},
 			CreatedAt:   time.Now(),
 		}
-
-		tx, err := s.DB.Begin()
-		if err != nil {
-			s.serverError(w, r, err)
-			return
-		}
-		defer s.rollback(tx)
 		err = s.expenseService.Create(expense)
 		if err != nil {
 			s.serverError(w, r, err)
@@ -115,14 +183,33 @@ func (s Server) getExpenseViewHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		defer s.rollback(tx)
+		defer s.expenseService.Rollback(tx)
 		expense, err := s.expenseService.Get(expenseId)
 		if err != nil {
 			if errors.Is(err, db.ErrNoRecord) {
-				http.Redirect(w, r, "/", http.StatusNotFound)
-				return
+				params := make(map[string]string)
+				params["type"] = "Expense"
+				params["id"] = strconv.Itoa(expenseId)
+				ev := errorView{
+					Data:       params,
+					CommonView: s.commonView(r),
+				}
+				s.clientError(w, http.StatusNotFound, ev)
 			}
 			s.serverError(w, r, err)
+			return
+		}
+		userId, _ := s.getCurrentUserInfo(r)
+		accessible, err := s.membershipService.ExpenseAccessibleBy(expenseId, userId)
+		if !accessible {
+			params := make(map[string]string)
+			params["type"] = "Expense"
+			params["id"] = strconv.Itoa(expenseId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusForbidden, ev)
 			return
 		}
 		_ = tx.Commit()

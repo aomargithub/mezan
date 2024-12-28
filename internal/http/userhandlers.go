@@ -94,7 +94,7 @@ func (s Server) postUserSignUpHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		s.rollback(tx)
+		s.userService.Rollback(tx)
 		err = s.userService.Create(user, string(hashedPassword))
 		if err != nil {
 			if errors.Is(err, db.ErrDuplicateEmail) {
@@ -143,7 +143,7 @@ func (s Server) postLoginHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		defer s.rollback(tx)
+		defer s.userService.Rollback(tx)
 		user, hp, err := s.userService.GetInfoAndHashedPassword(email)
 		if err != nil {
 			if errors.Is(err, db.ErrNoRecord) {

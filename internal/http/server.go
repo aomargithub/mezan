@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"time"
 )
 
@@ -83,16 +82,6 @@ func (s Server) createAuthentication(r *http.Request) *Authentication {
 
 func (s Server) csrfToken(r *http.Request) string {
 	return nosurf.Token(r)
-}
-
-func (s Server) serverError(w http.ResponseWriter, r *http.Request, err error) {
-	trace := string(debug.Stack())
-	s.Logger.Error(err.Error(), "uri", r.URL.RequestURI(), "method", r.Method, "trace", trace)
-	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-}
-
-func (s Server) clientError(w http.ResponseWriter, status int) {
-	http.Error(w, http.StatusText(status), status)
 }
 
 func (s *Server) initServices() {
@@ -275,10 +264,6 @@ func (s Server) render(w http.ResponseWriter, r *http.Request, page string, http
 	if err != nil {
 		s.serverError(w, r, err)
 	}
-}
-
-func (s Server) rollback(tx *sql.Tx) {
-	_ = tx.Rollback()
 }
 
 func (s *Server) initSessionManager() {

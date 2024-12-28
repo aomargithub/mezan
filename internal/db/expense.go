@@ -8,6 +8,7 @@ import (
 
 type ExpenseService struct {
 	DB *sql.DB
+	dbCommons
 }
 
 func (e ExpenseService) Create(expense domain.Expense) error {

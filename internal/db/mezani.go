@@ -7,7 +7,7 @@ import (
 
 type MezaniService struct {
 	DB *sql.DB
-	commonDB
+	dbCommons
 }
 
 func (s MezaniService) Create(mezani domain.Mezani) (int, error) {
@@ -66,17 +66,21 @@ func (s MezaniService) Get(id int) (domain.Mezani, error) {
 	return mezani, nil
 }
 
-func (s MezaniService) GetAll() ([]domain.Mezani, error) {
+func (s MezaniService) GetAll(userId int) ([]domain.Mezani, error) {
 	var mezanis []domain.Mezani
-	stmt := `select id, name, created_at from mezanis`
-	rows, err := s.DB.Query(stmt)
+	stmt := `select m.id, m.name, m.created_at, m.share_id, m.total_amount, m.settled_amount, u.name
+				from mezanis m
+						 join mezani_membership mm on mm.mezani_id = m.id
+						 join users u on u.id = mm.member_id
+				where u.id = $1`
+	rows, err := s.DB.Query(stmt, userId)
 	if err != nil {
 		return nil, err
 	}
 	defer s.close(rows)
 	for rows.Next() {
 		var mezani domain.Mezani
-		err := rows.Scan(&mezani.Id, &mezani.Name, &mezani.CreatedAt)
+		err := rows.Scan(&mezani.Id, &mezani.Name, &mezani.CreatedAt, &mezani.ShareId, &mezani.TotalAmount, &mezani.SettledAmount, &mezani.Creator.Name)
 
 		if err != nil {
 			return nil, err
@@ -88,6 +92,14 @@ func (s MezaniService) GetAll() ([]domain.Mezani, error) {
 		return nil, err
 	}
 	return mezanis, nil
+}
+
+func (s MezaniService) IsExist(mezaniId int) (bool, error) {
+	var exists bool
+	stmt := `select exists (select 1 from mezanis where id = $1)`
+	row := s.DB.QueryRow(stmt, mezaniId)
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 func (s MezaniService) AddExpense(mezaniId int, amount float32) error {

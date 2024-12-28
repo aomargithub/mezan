@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"unsafe"
 
 	"github.com/aomargithub/mezan/internal/domain"
 )
@@ -57,14 +58,13 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 			s.render(w, r, "mezaniCreate.tmpl", http.StatusBadRequest, mezaniCreateForm)
 			return
 		}
-		userId := s.sessionManager.GetInt(r.Context(), authenticatedUserIdSessionKey)
-		userName := s.sessionManager.GetString(r.Context(), authenticatedUserNameSessionKey)
+		userId, userName := s.getCurrentUserInfo(r)
 		mezani := domain.Mezani{
 			Name: name,
 			Creator: domain.User{
 				Id: userId,
 			},
-			ShareId:   fmt.Sprintf("%s_%s_%d", userName, name, rand.Intn(1000000)+1000000),
+			ShareId:   fmt.Sprintf("%s_%s_%s", userName, name, randStringBytesMaskImprSrcUnsafe(10)),
 			CreatedAt: now,
 		}
 
@@ -73,7 +73,7 @@ func (s Server) postMezaniCreateHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		defer s.rollback(tx)
+		defer s.mezaniService.Rollback(tx)
 		mezaniId, err := s.mezaniService.Create(mezani)
 		if err != nil {
 			s.serverError(w, r, err)
@@ -112,14 +112,34 @@ func (s Server) getMezaniViewHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		defer s.rollback(tx)
+		defer s.mezaniService.Rollback(tx)
 		mezani, err := s.mezaniService.Get(mezaniId)
 		if err != nil {
 			if errors.Is(err, db.ErrNoRecord) {
-				http.Redirect(w, r, "/", http.StatusNotFound)
+				params := make(map[string]string)
+				params["type"] = "Mezani"
+				params["id"] = strconv.Itoa(mezaniId)
+				ev := errorView{
+					Data:       params,
+					CommonView: s.commonView(r),
+				}
+				s.clientError(w, http.StatusNotFound, ev)
 				return
 			}
 			s.serverError(w, r, err)
+			return
+		}
+		userId, _ := s.getCurrentUserInfo(r)
+		accessible, err := s.membershipService.MezaniAccessibleBy(mezaniId, userId)
+		if !accessible {
+			params := make(map[string]string)
+			params["type"] = "Mezani"
+			params["id"] = strconv.Itoa(mezaniId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusForbidden, ev)
 			return
 		}
 		_ = tx.Commit()
@@ -138,8 +158,9 @@ func (s Server) homeHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		defer s.rollback(tx)
-		mezanis, err := s.mezaniService.GetAll()
+		defer s.mezaniService.Rollback(tx)
+		userId, _ := s.getCurrentUserInfo(r)
+		mezanis, err := s.mezaniService.GetAll(userId)
 		if err != nil {
 			s.serverError(w, r, err)
 			return
@@ -151,4 +172,31 @@ func (s Server) homeHandler() http.Handler {
 		}
 		s.render(w, r, "home.tmpl", http.StatusOK, view)
 	})
+}
+
+var src = rand.NewSource(time.Now().UnixNano())
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+func randStringBytesMaskImprSrcUnsafe(n int) string {
+	b := make([]byte, n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return *(*string)(unsafe.Pointer(&b))
 }

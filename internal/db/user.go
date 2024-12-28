@@ -11,6 +11,7 @@ import (
 
 type UserService struct {
 	DB *sql.DB
+	dbCommons
 }
 
 func (s UserService) Create(user domain.User, hashedPassword string) error {

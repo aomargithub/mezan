@@ -27,10 +27,24 @@ func (s Server) getExpenseItemCreateHandler() http.Handler {
 			s.clientError(w, http.StatusBadRequest)
 			return
 		}
+		tx, err := s.DB.Begin()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		defer s.expenseService.Rollback(tx)
 		mezaniId, err := s.expenseService.GetMezaniId(expenseId)
+
 		if err != nil {
 			if errors.Is(err, db.ErrNoRecord) {
-				http.Redirect(w, r, "/", http.StatusNotFound)
+				params := make(map[string]string)
+				params["type"] = "Expense"
+				params["id"] = strconv.Itoa(expenseId)
+				ev := errorView{
+					Data:       params,
+					CommonView: s.commonView(r),
+				}
+				s.clientError(w, http.StatusNotFound, ev)
 				return
 			}
 			s.serverError(w, r, err)
@@ -41,6 +55,7 @@ func (s Server) getExpenseItemCreateHandler() http.Handler {
 			MezaniId:         mezaniId,
 			CommonCreateView: s.commonCreateView(r),
 		}
+		_ = tx.Commit()
 		s.render(w, r, "expenseItemCreate.tmpl", http.StatusOK, expenseItemCreateForm)
 	})
 }
@@ -120,7 +135,7 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		defer s.rollback(tx)
+		defer s.expenseItemService.Rollback(tx)
 		err = s.expenseItemService.Create(expenseItem)
 		if err != nil {
 			s.serverError(w, r, err)
