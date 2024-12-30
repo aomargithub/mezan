@@ -133,6 +133,7 @@ func (s *Server) registerHandlers() {
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 
 	mux.Handle("GET /mezanis/{id}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniViewHandler())))))
+	mux.Handle("GET /mezanis/shareId/{shareId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniViewByShareIdHandler())))))
 	mux.Handle("GET /mezanis/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniCreateHandler())))))
 	mux.Handle("POST /mezanis/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postMezaniCreateHandler())))))
 	mux.Handle("GET /mezanis/{mezaniId}/expenses/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseCreateHandler())))))

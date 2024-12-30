@@ -22,7 +22,7 @@ func (s UserService) Create(user domain.User, hashedPassword string) error {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" && strings.Contains(pgErr.Message, "users_email_key") {
-				return ErrDuplicateEmail
+				return domain.ErrDuplicateEmail
 			}
 		}
 		return err
@@ -40,7 +40,7 @@ func (s UserService) GetInfoAndHashedPassword(email string) (domain.User, string
 	err := row.Scan(&user.Id, &user.Name, &hashedPassword)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.User{}, "", ErrNoRecord
+			return domain.User{}, "", domain.ErrNoRecord
 		}
 		return domain.User{}, "", err
 	}

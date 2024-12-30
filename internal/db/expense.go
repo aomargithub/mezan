@@ -71,7 +71,7 @@ func (e ExpenseService) Get(id int) (domain.Expense, error) {
 		return domain.Expense{}, err
 	}
 	if expense.Id == 0 {
-		return domain.Expense{}, ErrNoRecord
+		return domain.Expense{}, domain.ErrNoRecord
 	}
 	return expense, nil
 }
@@ -84,7 +84,7 @@ func (e ExpenseService) GetMezaniId(expenseId int) (int, error) {
 	err := r.Scan(&mezaniId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return 0, ErrNoRecord
+			return 0, domain.ErrNoRecord
 		}
 		return 0, err
 	}
@@ -97,6 +97,23 @@ func (e ExpenseService) IsExist(expenseId int) (bool, error) {
 	row := e.DB.QueryRow(stmt, expenseId)
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+func (e ExpenseService) AddAmount(expenseId int, amount float32) error {
+	stmt := `update expenses set total_amount=total_amount + $1 where id = $2`
+	r, err := e.DB.Exec(stmt, amount, expenseId)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := r.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return domain.ErrNoRecord
+	}
+	return nil
 }
 
 func (e ExpenseService) Settle(expenseId int, amount float32) error {

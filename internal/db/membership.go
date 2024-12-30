@@ -2,7 +2,10 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/aomargithub/mezan/internal/domain"
+	"github.com/jackc/pgx/v5/pgconn"
+	"strings"
 )
 
 type MembershipService struct {
@@ -12,7 +15,16 @@ type MembershipService struct {
 func (s MembershipService) Create(membership domain.MemberShip) error {
 	stmt := "insert into mezani_membership (created_at, member_id, mezani_id) values ($1,$2,$3)"
 	_, err := s.DB.Exec(stmt, membership.CreatedAt, membership.Member.Id, membership.Mezani.Id)
-	return err
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" && strings.Contains(pgErr.Message, "unique_member_per_mezani") {
+				return domain.ErrDuplicateRecord
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func (s MembershipService) MezaniAccessibleBy(mezaniId int, userId int) (bool, error) {

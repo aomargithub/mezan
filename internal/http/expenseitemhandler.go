@@ -3,7 +3,6 @@ package http
 import (
 	"errors"
 	"fmt"
-	"github.com/aomargithub/mezan/internal/db"
 	"github.com/aomargithub/mezan/internal/domain"
 	"net/http"
 	"strconv"
@@ -36,7 +35,7 @@ func (s Server) getExpenseItemCreateHandler() http.Handler {
 		mezaniId, err := s.expenseService.GetMezaniId(expenseId)
 
 		if err != nil {
-			if errors.Is(err, db.ErrNoRecord) {
+			if errors.Is(err, domain.ErrNoRecord) {
 				params := make(map[string]string)
 				params["type"] = "Expense"
 				params["id"] = strconv.Itoa(expenseId)
@@ -183,6 +182,16 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 			Expense:     domain.Expense{Id: expenseId},
 		}
 		err = s.expenseItemService.Create(expenseItem)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		err = s.expenseService.AddAmount(expenseId, totalAmount)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		err = s.mezaniService.AddAmount(mezaniId, totalAmount)
 		if err != nil {
 			s.serverError(w, r, err)
 			return

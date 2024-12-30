@@ -2,7 +2,6 @@ package http
 
 import (
 	"errors"
-	"github.com/aomargithub/mezan/internal/db"
 	"github.com/aomargithub/mezan/internal/domain"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -97,7 +96,7 @@ func (s Server) postUserSignUpHandler() http.Handler {
 		s.userService.Rollback(tx)
 		err = s.userService.Create(user, string(hashedPassword))
 		if err != nil {
-			if errors.Is(err, db.ErrDuplicateEmail) {
+			if errors.Is(err, domain.ErrDuplicateEmail) {
 				form.AddFieldError("Email", "Email address is already in use")
 				s.render(w, r, "userSignUp.tmpl", http.StatusUnprocessableEntity, form)
 				return
@@ -146,7 +145,7 @@ func (s Server) postLoginHandler() http.Handler {
 		defer s.userService.Rollback(tx)
 		user, hp, err := s.userService.GetInfoAndHashedPassword(email)
 		if err != nil {
-			if errors.Is(err, db.ErrNoRecord) {
+			if errors.Is(err, domain.ErrNoRecord) {
 				form.AddFormError("Email or Password is incorrect")
 				s.render(w, r, "login.tmpl", http.StatusUnprocessableEntity, form)
 				return

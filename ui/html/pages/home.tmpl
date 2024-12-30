@@ -6,20 +6,39 @@
         <tr>
             <td>
                 Name
-            <td>
+            </td>
             <td>
                 Created On
+            </td>
             <td>
-        <tr>
+                Created By
+            </td>
+            <td>
+                Amount/Settled
+            </td>
+            <td>
+                Share
+            </td>
+        </tr>
         {{range .Mezanis}}
             <tr>
                 <td>
                     <a href="/mezanis/{{.Id}}">{{.Name}}</href>
+                </td>
                 <td>
+                    {{.CreatedAt.Format "Mon, 02 Jan 2006 15:04" }}
+                </td>
                 <td>
-                    {{.CreatedAt}}
+                    {{.Creator.Name }}
+                </td>
                 <td>
-            <tr>
+                    {{.TotalAmount }} / {{.SettledAmount}}
+                </td>
+                <td>
+                    <a id="copy-a" data-share-id="{{.ShareId }}" href="#">Copy</a>
+                </td>
+            </tr>
         {{end}}
     </table>
+    <script src='/static/js/home.js' type='text/javascript'></script>
 {{end}}

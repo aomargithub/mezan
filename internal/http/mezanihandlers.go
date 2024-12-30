@@ -3,7 +3,6 @@ package http
 import (
 	"errors"
 	"fmt"
-	"github.com/aomargithub/mezan/internal/db"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -115,7 +114,7 @@ func (s Server) getMezaniViewHandler() http.Handler {
 		defer s.mezaniService.Rollback(tx)
 		mezani, err := s.mezaniService.Get(mezaniId)
 		if err != nil {
-			if errors.Is(err, db.ErrNoRecord) {
+			if errors.Is(err, domain.ErrNoRecord) {
 				params := make(map[string]string)
 				params["type"] = "Mezani"
 				params["id"] = strconv.Itoa(mezaniId)
@@ -148,6 +147,60 @@ func (s Server) getMezaniViewHandler() http.Handler {
 			CommonView: s.commonView(r),
 		}
 		s.render(w, r, "mezaniView.tmpl", http.StatusOK, view)
+	})
+}
+
+func (s Server) getMezaniViewByShareIdHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		shareId := r.PathValue("shareId")
+
+		tx, err := s.DB.Begin()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		defer s.mezaniService.Rollback(tx)
+		mezani, err := s.mezaniService.GetByShareId(shareId)
+		if err != nil {
+			if errors.Is(err, domain.ErrNoRecord) {
+				params := make(map[string]string)
+				params["type"] = "Mezani"
+				params["id"] = shareId
+				ev := errorView{
+					Data:       params,
+					CommonView: s.commonView(r),
+				}
+				s.clientError(w, http.StatusNotFound, ev)
+				return
+			}
+			s.serverError(w, r, err)
+			return
+		}
+		userId, _ := s.getCurrentUserInfo(r)
+		membership := domain.MemberShip{
+			Mezani: domain.Mezani{
+				Id: mezani.Id,
+			},
+			Member: domain.User{
+				Id: userId,
+			},
+			CreatedAt: time.Now(),
+		}
+		err = s.membershipService.Create(membership)
+
+		if err != nil {
+			if errors.Is(err, domain.ErrDuplicateRecord) {
+				s.sessionManager.Put(r.Context(), "flash", "Your already a member in that Mezani!")
+				http.Redirect(w, r, fmt.Sprintf("/mezanis/%d", mezani.Id), http.StatusSeeOther)
+				return
+			}
+			s.serverError(w, r, err)
+			return
+		}
+
+		_ = tx.Commit()
+		s.sessionManager.Put(r.Context(), "flash", "Your have been added as a member to that Mezani successfully!")
+		http.Redirect(w, r, fmt.Sprintf("/mezanis/%d", mezani.Id), http.StatusSeeOther)
 	})
 }
 

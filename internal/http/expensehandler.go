@@ -3,7 +3,6 @@ package http
 import (
 	"errors"
 	"fmt"
-	"github.com/aomargithub/mezan/internal/db"
 	"github.com/aomargithub/mezan/internal/domain"
 	"net/http"
 	"strconv"
@@ -160,10 +159,12 @@ func (s Server) postExpenseCreateHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		err = s.mezaniService.AddExpense(mezaniId, expense.TotalAmount)
-		if err != nil {
-			s.serverError(w, r, err)
-			return
+		if expense.TotalAmount != 0 {
+			err = s.mezaniService.AddAmount(mezaniId, expense.TotalAmount)
+			if err != nil {
+				s.serverError(w, r, err)
+				return
+			}
 		}
 		_ = tx.Commit()
 		s.sessionManager.Put(r.Context(), "flash", "Expense successfully created!")
@@ -186,7 +187,7 @@ func (s Server) getExpenseViewHandler() http.Handler {
 		defer s.expenseService.Rollback(tx)
 		expense, err := s.expenseService.Get(expenseId)
 		if err != nil {
-			if errors.Is(err, db.ErrNoRecord) {
+			if errors.Is(err, domain.ErrNoRecord) {
 				params := make(map[string]string)
 				params["type"] = "Expense"
 				params["id"] = strconv.Itoa(expenseId)
