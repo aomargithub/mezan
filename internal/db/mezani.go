@@ -116,8 +116,8 @@ func (s MezaniService) GetAll(userId int) ([]domain.Mezani, error) {
 	stmt := `select m.id, m.name, m.created_at, m.share_id, m.total_amount, m.settled_amount, u.name
 				from mezanis m
 						 join mezani_membership mm on mm.mezani_id = m.id
-						 join users u on u.id = mm.member_id
-				where u.id = $1`
+						 join users u on u.id = m.creator_id
+				where mm.member_id = $1 order by m.created_at desc limit 10`
 	rows, err := s.DB.Query(stmt, userId)
 	if err != nil {
 		return nil, err
