@@ -48,7 +48,7 @@
                     Created On
                 </td>
                 <td>
-                    {{.CreatedAt}}
+                    {{.CreatedAt.Format "Mon, 02 Jan 2006 15:04" }}
                 </td>
             </tr>
                 <tr>
@@ -70,7 +70,7 @@
                             {{range .Items}}
                                 <tr>
                                     <td>
-                                        <a href="/expenses/{{.Id}}"> {{.Name}} </href>
+                                        <a href="/expenseItems/{{.Id}}"> {{.Name}} </href>
                                     </td>
                                     <td>
                                         {{.Quantity}}
