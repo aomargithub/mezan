@@ -190,7 +190,7 @@ func (s Server) getMezaniViewByShareIdHandler() http.Handler {
 
 		if err != nil {
 			if errors.Is(err, domain.ErrDuplicateRecord) {
-				s.sessionManager.Put(r.Context(), "flash", "Your already a member in that Mezani!")
+				s.sessionManager.Put(r.Context(), "flash", "Your are already a member in that Mezani!")
 				http.Redirect(w, r, fmt.Sprintf("/mezanis/%d", mezani.Id), http.StatusSeeOther)
 				return
 			}

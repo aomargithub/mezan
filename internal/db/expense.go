@@ -1,9 +1,12 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"github.com/aomargithub/mezan/internal/domain"
+	"github.com/jackc/pgx/v5"
+	"time"
 )
 
 type ExpenseService struct {
@@ -23,12 +26,12 @@ func (e ExpenseService) Get(id int) (domain.Expense, error) {
 	stmt := `select e.id              as expense_id,
 				   e.name            as expense_name,
 				   e.created_at      as expense_created_at,
-				   e.settled_amount  as expense_settled_amount,
+				   e.allocated_amount  as expense_allocated_amount,
 				   e.total_amount    as expense_total_amount,
 				   u1.name           as expense_creator_name,
 				   COALESCE(ei.id, 0)             as item_id,
 				   COALESCE(ei.name, '')          as item_name,
-				   COALESCE(ei.settled_amount, 0) as item_settled_amount,
+				   COALESCE(ei.allocated_amount, 0) as item_allocated_amount,
 				   COALESCE(ei.amount, 0)         as item_amount,
 				   COALESCE(ei.total_amount, 0)   as item_total_amount,
 				   COALESCE(ei.quantity, 0)       as item_quantity
@@ -49,12 +52,12 @@ func (e ExpenseService) Get(id int) (domain.Expense, error) {
 			&expense.Id,
 			&expense.Name,
 			&expense.CreatedAt,
-			&expense.SettledAmount,
+			&expense.AllocatedAmount,
 			&expense.TotalAmount,
 			&expense.Creator.Name,
 			&item.Id,
 			&item.Name,
-			&item.SettledAmount,
+			&item.AllocatedAmount,
 			&item.Amount,
 			&item.TotalAmount,
 			&item.Quantity,
@@ -116,8 +119,24 @@ func (e ExpenseService) AddAmount(expenseId int, amount float32) error {
 	return nil
 }
 
-func (e ExpenseService) Settle(expenseId int, amount float32) error {
-	stmt := `update expenses set settled_amount = settled_amount + $1 where id = $2`
-	_, err := e.DB.Exec(stmt, amount, expenseId)
+func (e ExpenseService) Participate(share domain.ExpenseShare) error {
+	stmt1 := `update expenses set allocated_amount = allocated_amount + $1, last_updated_at = $2 where id = $3`
+	stmt2 := `insert into expense_shares(created_at, share, amount, share_type, expense_id, mezani_id, participant_id) 
+			values ($1, $2, $3, $4, $5, $6, $7)
+			on conflict on constraint unique_participant_per_expense_share 
+			do update set amount = amount + $3, last_updated_at = $1`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	batch := &pgx.Batch{}
+	batch.Queue(stmt1, share.Amount, share.CreatedAt, share.Expense.Id)
+	batch.Queue(stmt2, share.CreatedAt, share.Share, share.Amount, share.ShareType, share.Expense.Id,
+		share.Mezani.Id, share.Participant.Id)
+	var conn *pgx.Conn
+	br := conn.SendBatch(ctx, batch)
+	_, err := br.Exec()
+	if err != nil {
+		return err
+	}
 	return err
 }

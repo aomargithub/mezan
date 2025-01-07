@@ -19,6 +19,11 @@ type expenseItemCreateForm struct {
 	CommonCreateView
 }
 
+type expenseItemView struct {
+	ExpenseItem domain.ExpenseItem
+	CommonView
+}
+
 func (s Server) getExpenseItemCreateHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		expenseId, err := strconv.Atoi(r.PathValue("expenseId"))
@@ -204,4 +209,60 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 		s.sessionManager.Put(r.Context(), "flash", "Item successfully created!")
 		http.Redirect(w, r, fmt.Sprintf("/expenses/%d", expenseId), http.StatusSeeOther)
 	})
+}
+
+func (s Server) getExpenseItemViewHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		expenseItemId, err := strconv.Atoi(r.PathValue("expenseItemId"))
+		if err != nil {
+			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+		tx, err := s.DB.Begin()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		defer s.expenseService.Rollback(tx)
+		expenseItem, err := s.expenseItemService.Get(expenseItemId)
+		if err != nil {
+			if errors.Is(err, domain.ErrNoRecord) {
+				params := make(map[string]string)
+				params["type"] = "Expense Item"
+				params["id"] = strconv.Itoa(expenseItemId)
+				ev := errorView{
+					Data:       params,
+					CommonView: s.commonView(r),
+				}
+				s.clientError(w, http.StatusNotFound, ev)
+			}
+			s.serverError(w, r, err)
+			return
+		}
+		userId, _ := s.getCurrentUserInfo(r)
+		accessible, err := s.membershipService.ExpenseItemAccessibleBy(expenseItemId, userId)
+		if !accessible {
+			params := make(map[string]string)
+			params["type"] = "Expense Item"
+			params["id"] = strconv.Itoa(expenseItemId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusForbidden, ev)
+			return
+		}
+		_ = tx.Commit()
+		view := expenseItemView{
+			ExpenseItem: expenseItem,
+			CommonView:  s.commonView(r),
+		}
+		s.render(w, r, "expenseItemView.tmpl", http.StatusOK, view)
+	})
+}
+
+func (s Server) getExpenseItemParticipationViewHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	}
 }

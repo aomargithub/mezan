@@ -25,14 +25,14 @@ func (s MezaniService) Get(id int) (domain.Mezani, error) {
 	var mezani domain.Mezani
 	stmt := `select m.id                                                          as mezani_id,
 				   m.name                                                        as mezani_name,
-				   m.total_amount                                                   mezani_total_amount,
-				   m.settled_amount                                                 mezani_settled_amount,
+				   m.total_amount                                                as mezani_total_amount,
+				   m.allocated_amount                                            as mezani_allocated_amount,
 				   m.created_at                                                  as mezani_created_at,
 				   u1.name                                                       as mezani_creator_name,
 				   COALESCE(e.id, 0)                                             as expense_id,
 				   COALESCE(e.name, '')                                          as expense_name,
 				   COALESCE(e.total_amount, 0)                                   as expense_total_amount,
-				   COALESCE(e.settled_amount, 0)                                 as expense_settled_amount,
+				   COALESCE(e.allocated_amount, 0)                               as expense_allocated_amount,
 				   COALESCE(e.created_at, '0001-01-01 00:00:00+00'::timestamptz) as expense_created_at,
 				   COALESCE(u2.name, '')                                         as expense_creator_name
 			from mezanis m
@@ -47,8 +47,8 @@ func (s MezaniService) Get(id int) (domain.Mezani, error) {
 	defer s.close(rows)
 	for rows.Next() {
 		var expense domain.Expense
-		err = rows.Scan(&mezani.Id, &mezani.Name, &mezani.TotalAmount, &mezani.SettledAmount, &mezani.CreatedAt, &mezani.Creator.Name,
-			&expense.Id, &expense.Name, &expense.TotalAmount, &expense.SettledAmount, &expense.CreatedAt, &expense.Creator.Name)
+		err = rows.Scan(&mezani.Id, &mezani.Name, &mezani.TotalAmount, &mezani.AllocatedAmount, &mezani.CreatedAt, &mezani.Creator.Name,
+			&expense.Id, &expense.Name, &expense.TotalAmount, &expense.AllocatedAmount, &expense.CreatedAt, &expense.Creator.Name)
 		if err != nil {
 			return domain.Mezani{}, err
 		}
@@ -70,14 +70,14 @@ func (s MezaniService) GetByShareId(shareId string) (domain.Mezani, error) {
 	var mezani domain.Mezani
 	stmt := `select m.id                                                          as mezani_id,
 				   m.name                                                        as mezani_name,
-				   m.total_amount                                                   mezani_total_amount,
-				   m.settled_amount                                                 mezani_settled_amount,
+				   m.total_amount                                                as mezani_total_amount,
+				   m.allocated_amount                                            as mezani_allocated_amount,
 				   m.created_at                                                  as mezani_created_at,
 				   u1.name                                                       as mezani_creator_name,
 				   COALESCE(e.id, 0)                                             as expense_id,
 				   COALESCE(e.name, '')                                          as expense_name,
 				   COALESCE(e.total_amount, 0)                                   as expense_total_amount,
-				   COALESCE(e.settled_amount, 0)                                 as expense_settled_amount,
+				   COALESCE(e.allocated_amount, 0)                               as expense_allocated_amount,
 				   COALESCE(e.created_at, '0001-01-01 00:00:00+00'::timestamptz) as expense_created_at,
 				   COALESCE(u2.name, '')                                         as expense_creator_name
 			from mezanis m
@@ -92,8 +92,8 @@ func (s MezaniService) GetByShareId(shareId string) (domain.Mezani, error) {
 	defer s.close(rows)
 	for rows.Next() {
 		var expense domain.Expense
-		err = rows.Scan(&mezani.Id, &mezani.Name, &mezani.TotalAmount, &mezani.SettledAmount, &mezani.CreatedAt, &mezani.Creator.Name,
-			&expense.Id, &expense.Name, &expense.TotalAmount, &expense.SettledAmount, &expense.CreatedAt, &expense.Creator.Name)
+		err = rows.Scan(&mezani.Id, &mezani.Name, &mezani.TotalAmount, &mezani.AllocatedAmount, &mezani.CreatedAt, &mezani.Creator.Name,
+			&expense.Id, &expense.Name, &expense.TotalAmount, &expense.AllocatedAmount, &expense.CreatedAt, &expense.Creator.Name)
 		if err != nil {
 			return domain.Mezani{}, err
 		}
@@ -113,7 +113,7 @@ func (s MezaniService) GetByShareId(shareId string) (domain.Mezani, error) {
 
 func (s MezaniService) GetAll(userId int) ([]domain.Mezani, error) {
 	var mezanis []domain.Mezani
-	stmt := `select m.id, m.name, m.created_at, m.share_id, m.total_amount, m.settled_amount, u.name
+	stmt := `select m.id, m.name, m.created_at, m.share_id, m.total_amount, m.allocated_amount, u.name
 				from mezanis m
 						 join mezani_membership mm on mm.mezani_id = m.id
 						 join users u on u.id = m.creator_id
@@ -125,7 +125,7 @@ func (s MezaniService) GetAll(userId int) ([]domain.Mezani, error) {
 	defer s.close(rows)
 	for rows.Next() {
 		var mezani domain.Mezani
-		err := rows.Scan(&mezani.Id, &mezani.Name, &mezani.CreatedAt, &mezani.ShareId, &mezani.TotalAmount, &mezani.SettledAmount, &mezani.Creator.Name)
+		err := rows.Scan(&mezani.Id, &mezani.Name, &mezani.CreatedAt, &mezani.ShareId, &mezani.TotalAmount, &mezani.AllocatedAmount, &mezani.Creator.Name)
 
 		if err != nil {
 			return nil, err

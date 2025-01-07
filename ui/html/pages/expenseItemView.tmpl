@@ -1,0 +1,73 @@
+{{define "title"}} Expense Item {{.ExpenseItem.Name}} {{end}}
+
+{{define "main"}}
+    {{with .ExpenseItem}}
+        <table>
+            <tr>
+                <td>
+                    Id
+                </td>
+                <td>
+                    {{.Id}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Name
+                </td>
+                <td>
+                    {{.Name}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Created By
+                </td>
+                <td>
+                    {{.Creator.Name}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Amount
+                </td>
+                <td>
+                    {{.Amount}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Quantity
+                </td>
+                <td>
+                    {{.Quantity}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Total Amount
+                </td>
+                <td>
+                    {{.TotalAmount}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Allocated Amount
+                </td>
+                <td>
+                    {{.AllocatedAmount}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Created On
+                </td>
+                <td>
+                    {{.CreatedAt.Format "Mon, 02 Jan 2006 15:04" }}
+                </td>
+
+            </tr>
+        </table>
+    {{end}}
+{{end}}

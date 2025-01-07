@@ -14,7 +14,7 @@
                 Created By
             </td>
             <td>
-                Amount/Settled
+                Amount/Allocated
             </td>
             <td>
                 Share
@@ -32,10 +32,10 @@
                     {{.Creator.Name }}
                 </td>
                 <td>
-                    {{.TotalAmount }} / {{.SettledAmount}}
+                    {{.TotalAmount }} / {{.AllocatedAmount}}
                 </td>
                 <td>
-                    <a id="copy-a" data-share-id="{{.ShareId }}" href="#">Copy</a>
+                    <a id="copy-a-{{.Id}}" data-share-id="{{.ShareId }}" href="#">Copy</a>
                 </td>
             </tr>
         {{end}}
