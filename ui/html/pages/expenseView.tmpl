@@ -66,6 +66,7 @@
                                 <td>Price</td>
                                 <td>Total</td>
                                 <td>Allocated</td>
+                                <td>Actions</td>
                             </tr>
                             {{range .Items}}
                                 <tr>
@@ -83,6 +84,9 @@
                                     </td>
                                     <td>
                                         {{.AllocatedAmount}}
+                                    </td>
+                                    <td>
+                                        <a href="/expenseItems/{{.Id}}/participation">Participate</a>
                                     </td>
                                 </tr>
                             {{end}}

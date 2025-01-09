@@ -142,7 +142,8 @@ func (s *Server) registerHandlers() {
 	mux.Handle("GET /expenses/{expenseId}/items/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemCreateHandler())))))
 	mux.Handle("POST /expenses/{expenseId}/items/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postExpenseItemCreateHandler())))))
 	mux.Handle("GET /expenseItems/{expenseItemId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemViewHandler())))))
-	mux.Handle("GET /expenseItems/{expenseItemId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemParticipationViewHandler())))))
+	mux.Handle("GET /expenseItems/{expenseItemId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemParticipationCreateHandler())))))
+	mux.Handle("POST /expenseItems/{expenseItemId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postExpenseItemParticipationCreateHandler())))))
 
 	mux.Handle("GET /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.getUserSignUpHandler())))
 	mux.Handle("POST /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.postUserSignUpHandler())))

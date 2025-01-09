@@ -1,0 +1,38 @@
+{{define "title"}}Participate in expense item {{end}}
+{{define "main"}}
+    <form action='/expenseItems/{{.ExpenseItemId}}/participation' method='POST'>
+        <input type='hidden' name='csrf_token' value='{{.CsrfToken}}'>
+        <input type='hidden' name='mezaniId' value='{{.MezaniId}}'>
+        <input type='hidden' name='expenseId' value='{{.ExpenseId}}'>
+        <input type='hidden' name='expenseItemId' value='{{.ExpenseItemId}}'>
+        <div>
+            <label>Share Type:</label>
+             {{with .FieldErrors.ShareType}}
+                <label class='error'>{{.}}</label>
+            {{end}}
+            <select name='shareType' id="shareType" value='{{.ShareType}}'>
+                 {{range .ShareTypes}}
+                    <option value="{{.}}">{{.}}</option>
+                 {{end}}
+            </select>
+        </div>
+        <div>
+            <label>Share:</label>
+             {{with .FieldErrors.Share}}
+                <label class='error'>{{.}}</label>
+            {{end}}
+            <input type='text' name='share' id="share" value='{{.Share}}'>
+        </div>
+        <div>
+            <label>Amount:</label>
+             {{with .FieldErrors.Amount}}
+                <label class='error'>{{.}}</label>
+            {{end}}
+            <input type='text' name='amount' id="amount" value='{{.Amount}}'>
+        </div>
+        <div>
+            <input type='submit' value='Participate'>
+        </div>
+    </form>
+    <script src='/static/js/expense-item-create.js' type='text/javascript'></script>
+{{end}}

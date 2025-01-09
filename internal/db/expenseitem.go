@@ -19,6 +19,29 @@ func (e ExpenseItemService) Create(expenseItem domain.ExpenseItem) error {
 	return err
 }
 
+func (e ExpenseItemService) GetExpenseId(expenseItemId int) (int, int, error) {
+	stmt := " select mezani_id, expense_id from expense_items where id = $1"
+
+	r := e.DB.QueryRow(stmt, expenseItemId)
+	var mezaniId, expenseId int
+	err := r.Scan(&mezaniId, &expenseId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, 0, domain.ErrNoRecord
+		}
+		return 0, 0, err
+	}
+	return mezaniId, expenseId, nil
+}
+
+func (e ExpenseItemService) IsExist(expenseItemId int) (bool, error) {
+	var exists bool
+	stmt := `select exists (select 1 from expense_items where id = $1)`
+	row := e.DB.QueryRow(stmt, expenseItemId)
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 func (e ExpenseItemService) Get(expenseItemId int) (domain.ExpenseItem, error) {
 	var item domain.ExpenseItem
 	stmt := `select ei.id,

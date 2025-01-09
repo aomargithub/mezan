@@ -66,7 +66,11 @@
                 <td>
                     {{.CreatedAt.Format "Mon, 02 Jan 2006 15:04" }}
                 </td>
-
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <a href="/expenseItems/{{.Id}}/participation">Participate</a>
+                </td>
             </tr>
         </table>
     {{end}}

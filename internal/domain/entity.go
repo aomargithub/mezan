@@ -65,6 +65,8 @@ const (
 	EXACT             = ShareType("EXACT")
 )
 
+var ShareTypes = []ShareType{PERCENTAGE, DECIMAL_FRACTIONS, EXACT}
+
 type MezaniShare struct {
 	Id          int
 	CreatedAt   time.Time

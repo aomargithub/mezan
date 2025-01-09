@@ -260,9 +260,3 @@ func (s Server) getExpenseItemViewHandler() http.Handler {
 		s.render(w, r, "expenseItemView.tmpl", http.StatusOK, view)
 	})
 }
-
-func (s Server) getExpenseItemParticipationViewHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	}
-}
