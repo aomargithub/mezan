@@ -84,7 +84,7 @@ CREATE INDEX expense_items_expense_idx ON expenses (id);
 --rollback drop index expense_items_expense_idx;
 
 --changeset aomar:8
-CREATE TYPE share_type AS ENUM ('PERCENTAGE', 'DECIMAL_FRACTIONS', 'EXACT');
+CREATE TYPE share_type AS ENUM ('PERCENTAGE', 'EXACT');
 --rollback DROP TYPE share_type;
 
 --changeset aomar:9

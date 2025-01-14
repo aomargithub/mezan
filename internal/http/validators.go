@@ -40,6 +40,12 @@ func (v *Validator) NotNegative(key string, value float32) {
 	}
 }
 
+func (v *Validator) NotGreaterThan(key string, value float32, target float32) {
+	if value > target {
+		v.AddFieldError(key, fmt.Sprintf("%s cannot be greater than %.2f ", key, target))
+	}
+}
+
 func (v *Validator) MaxChars(key, value string, n int) {
 	if utf8.RuneCountInString(value) > n {
 		v.AddFieldError(key, fmt.Sprintf("%s cannot be more than %d characters long", key, n))

@@ -208,6 +208,7 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 		}
 		s.sessionManager.Put(r.Context(), "flash", "Item successfully created!")
 		http.Redirect(w, r, fmt.Sprintf("/expenses/%d", expenseId), http.StatusSeeOther)
+		return
 	})
 }
 

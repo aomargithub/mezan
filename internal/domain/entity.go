@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"slices"
 	"time"
 )
 
@@ -59,13 +60,20 @@ type ExpenseItem struct {
 }
 type ShareType string
 
+func NewShareType(value string) *ShareType {
+	st := ShareType(value)
+	if slices.Contains(ShareTypes, st) {
+		return &st
+	}
+	return nil
+}
+
 const (
-	PERCENTAGE        = ShareType("PERCENTAGE")
-	DECIMAL_FRACTIONS = ShareType("DECIMAL_FRACTIONS")
-	EXACT             = ShareType("EXACT")
+	PERCENTAGE = ShareType("PERCENTAGE")
+	EXACT      = ShareType("EXACT")
 )
 
-var ShareTypes = []ShareType{PERCENTAGE, DECIMAL_FRACTIONS, EXACT}
+var ShareTypes = []ShareType{PERCENTAGE, EXACT}
 
 type MezaniShare struct {
 	Id          int

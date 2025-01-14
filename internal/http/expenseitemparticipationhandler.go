@@ -2,9 +2,11 @@ package http
 
 import (
 	"errors"
+	"fmt"
 	"github.com/aomargithub/mezan/internal/domain"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type expenseItemParticipationCreateForm struct {
@@ -87,22 +89,20 @@ func (s Server) postExpenseItemParticipationCreateHandler() http.Handler {
 		}
 		defer s.expenseItemService.Rollback(tx)
 
-		exists, err := s.expenseItemService.IsExist(expenseItemId)
+		totalAmount, allocatedAmount, err := s.expenseItemService.GetTotalAndAllocatedAmounts(expenseItemId)
 
 		if err != nil {
-			s.serverError(w, r, err)
-			return
-		}
-
-		if exists {
-			params := make(map[string]string)
-			params["type"] = "Expense Item"
-			params["id"] = strconv.Itoa(expenseItemId)
-			ev := errorView{
-				Data:       params,
-				CommonView: s.commonView(r),
+			if errors.Is(err, domain.ErrNoRecord) {
+				params := make(map[string]string)
+				params["type"] = "Expense Item"
+				params["id"] = strconv.Itoa(expenseItemId)
+				ev := errorView{
+					Data:       params,
+					CommonView: s.commonView(r),
+				}
+				s.clientError(w, http.StatusNotFound, ev)
 			}
-			s.clientError(w, http.StatusNotFound, ev)
+			s.serverError(w, r, err)
 			return
 		}
 		userId, _ := s.getCurrentUserInfo(r)
@@ -124,8 +124,8 @@ func (s Server) postExpenseItemParticipationCreateHandler() http.Handler {
 			s.clientError(w, http.StatusBadRequest)
 			return
 		}
-
-		shareType := domain.ShareType(r.PostForm.Get("shareType"))
+		shareTypeStr := r.PostForm.Get("shareType")
+		shareType := domain.NewShareType(shareTypeStr)
 		share64, err := strconv.ParseFloat(r.PostForm.Get("share"), 32)
 		if err != nil {
 			s.clientError(w, http.StatusBadRequest)
@@ -152,18 +152,89 @@ func (s Server) postExpenseItemParticipationCreateHandler() http.Handler {
 		}
 
 		expenseItemParticipationCreateForm := expenseItemParticipationCreateForm{
-			MezaniId:      mezaniId,
-			ExpenseId:     expenseId,
-			ExpenseItemId: expenseItemId,
-			Amount:        amount,
-			Share:         share,
-			ShareType:     shareType,
-			ShareTypes:    domain.ShareTypes,
+			MezaniId:         mezaniId,
+			ExpenseId:        expenseId,
+			ExpenseItemId:    expenseItemId,
+			Amount:           amount,
+			Share:            share,
+			ShareType:        *shareType,
+			ShareTypes:       domain.ShareTypes,
+			CommonCreateView: s.commonCreateView(r),
 		}
 
-		expenseItemParticipationCreateForm.NotBlank("shareType", string(shareType))
-		expenseItemParticipationCreateForm.NotNegative("TotalAmount", totalAmount)
-		expenseItemParticipationCreateForm.NotNegative("amount", amount)
-		expenseItemParticipationCreateForm.NotNegative("quantity", quantity)
+		expenseItemParticipationCreateForm.NotBlank("ShareType", string(*shareType))
+		expenseItemParticipationCreateForm.NotNegative("Share", share)
+		expenseItemParticipationCreateForm.NotNegative("Amount", amount)
+		expenseItemParticipationCreateForm.NotGreaterThan("Amount", amount+allocatedAmount, totalAmount)
+
+		if !expenseItemParticipationCreateForm.Valid() {
+			s.render(w, r, "expenseItemParticipationCreate.tmpl", http.StatusBadRequest, expenseItemParticipationCreateForm)
+			return
+		}
+
+		expenseItemShare := domain.ExpenseItemShare{
+			Mezani: domain.Mezani{
+				Id: mezaniId,
+			},
+			Expense: domain.Expense{
+				Id: expenseId,
+			},
+			ExpenseItem: domain.ExpenseItem{
+				Id: expenseItemId,
+			},
+			Participant: domain.User{
+				Id: userId,
+			},
+			ShareType: *shareType,
+			Share:     share,
+			Amount:    amount,
+			CreatedAt: time.Now(),
+		}
+		oldAmount, err := s.expenseItemService.Participate(expenseItemShare)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		mezaniShare := domain.MezaniShare{
+			Mezani: domain.Mezani{
+				Id: mezaniId,
+			},
+			Participant: domain.User{
+				Id: userId,
+			},
+			ShareType: domain.EXACT,
+			Share:     share,
+			Amount:    amount - oldAmount,
+			CreatedAt: time.Now(),
+		}
+		err = s.mezaniService.Participate(mezaniShare)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		expenseShare := domain.ExpenseShare{
+			Mezani: domain.Mezani{
+				Id: mezaniId,
+			},
+			Expense: domain.Expense{
+				Id: expenseId,
+			},
+			Participant: domain.User{
+				Id: userId,
+			},
+			ShareType: domain.EXACT,
+			Share:     share,
+			Amount:    amount - oldAmount,
+			CreatedAt: time.Now(),
+		}
+		err = s.expenseService.Participate(expenseShare)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+
+		_ = tx.Commit()
+		s.sessionManager.Put(r.Context(), "flash", "Your participation has been saved successfully!")
+		http.Redirect(w, r, fmt.Sprintf("/expenseItems/%d", expenseItemId), http.StatusSeeOther)
 	})
 }

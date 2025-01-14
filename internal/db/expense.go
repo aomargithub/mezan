@@ -1,12 +1,9 @@
 package db
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"github.com/aomargithub/mezan/internal/domain"
-	"github.com/jackc/pgx/v5"
-	"time"
 )
 
 type ExpenseService struct {
@@ -119,24 +116,28 @@ func (e ExpenseService) AddAmount(expenseId int, amount float32) error {
 	return nil
 }
 
-func (e ExpenseService) Participate(share domain.ExpenseShare) error {
-	stmt1 := `update expenses set allocated_amount = allocated_amount + $1, last_updated_at = $2 where id = $3`
-	stmt2 := `insert into expense_shares(created_at, share, amount, share_type, expense_id, mezani_id, participant_id) 
+func (e ExpenseService) Participate(share domain.ExpenseShare) (float32, error) {
+	var oldAmount float32
+	stmt := `update expenses set allocated_amount = allocated_amount + $1, last_updated_at = $2 where id = $3`
+	_, err := e.DB.Exec(stmt, share.Amount, share.CreatedAt, share.Expense.Id)
+	if err != nil {
+		return 0, err
+	}
+
+	stmt = `insert into expense_shares(created_at, share, amount, share_type, expense_id, mezani_id, participant_id) 
 			values ($1, $2, $3, $4, $5, $6, $7)
 			on conflict on constraint unique_participant_per_expense_share 
-			do update set amount = amount + $3, last_updated_at = $1`
-
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
-	batch := &pgx.Batch{}
-	batch.Queue(stmt1, share.Amount, share.CreatedAt, share.Expense.Id)
-	batch.Queue(stmt2, share.CreatedAt, share.Share, share.Amount, share.ShareType, share.Expense.Id,
+			do update set amount = expense_shares.amount + $3,
+			              share = ,
+			              share_type = $4,
+			              last_updated_at = $1
+			RETURNING (select old from expense_shares old where participant_id = $7 and expense_id = $5).amount`
+	row := e.DB.QueryRow(stmt, share.CreatedAt, share.Share, share.Amount, share.ShareType, share.Expense.Id,
 		share.Mezani.Id, share.Participant.Id)
-	var conn *pgx.Conn
-	br := conn.SendBatch(ctx, batch)
-	_, err := br.Exec()
+	err = row.Scan(&oldAmount)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return err
+
+	return oldAmount, nil
 }
