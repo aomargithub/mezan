@@ -10,13 +10,14 @@ import (
 )
 
 type expenseItemParticipationCreateForm struct {
-	MezaniId      int
-	ExpenseId     int
-	ExpenseItemId int
-	ShareType     domain.ShareType
-	Share         float32
-	Amount        float32
-	ShareTypes    []domain.ShareType
+	MezaniId               int
+	ExpenseId              int
+	ExpenseItemId          int
+	ShareType              domain.ShareType
+	Share                  float32
+	Amount                 float32
+	ExpenseItemTotalAmount float32
+	ShareTypes             []domain.ShareType
 	CommonCreateView
 }
 
@@ -33,7 +34,7 @@ func (s Server) getExpenseItemParticipationCreateHandler() http.Handler {
 			return
 		}
 		defer s.expenseItemService.Rollback(tx)
-		mezaniId, expenseId, err := s.expenseItemService.GetExpenseId(expenseItemId)
+		mezaniId, expenseId, totalAmount, err := s.expenseItemService.GetExpenseIdMezaniIdTotalAmount(expenseItemId)
 		if err != nil {
 			if errors.Is(err, domain.ErrNoRecord) {
 				params := make(map[string]string)
@@ -64,11 +65,12 @@ func (s Server) getExpenseItemParticipationCreateHandler() http.Handler {
 			return
 		}
 		expenseItemParticipationCreateForm := expenseItemParticipationCreateForm{
-			ExpenseId:        expenseId,
-			MezaniId:         mezaniId,
-			ExpenseItemId:    expenseItemId,
-			CommonCreateView: s.commonCreateView(r),
-			ShareTypes:       domain.ShareTypes,
+			ExpenseId:              expenseId,
+			MezaniId:               mezaniId,
+			ExpenseItemId:          expenseItemId,
+			CommonCreateView:       s.commonCreateView(r),
+			ShareTypes:             domain.ShareTypes,
+			ExpenseItemTotalAmount: totalAmount,
 		}
 		_ = tx.Commit()
 		s.render(w, r, "expenseItemParticipationCreate.tmpl", http.StatusOK, expenseItemParticipationCreateForm)
@@ -152,26 +154,30 @@ func (s Server) postExpenseItemParticipationCreateHandler() http.Handler {
 		}
 
 		expenseItemParticipationCreateForm := expenseItemParticipationCreateForm{
-			MezaniId:         mezaniId,
-			ExpenseId:        expenseId,
-			ExpenseItemId:    expenseItemId,
-			Amount:           amount,
-			Share:            share,
-			ShareType:        *shareType,
-			ShareTypes:       domain.ShareTypes,
-			CommonCreateView: s.commonCreateView(r),
+			MezaniId:               mezaniId,
+			ExpenseId:              expenseId,
+			ExpenseItemId:          expenseItemId,
+			Amount:                 amount,
+			Share:                  share,
+			ShareType:              *shareType,
+			ShareTypes:             domain.ShareTypes,
+			ExpenseItemTotalAmount: totalAmount,
+			CommonCreateView:       s.commonCreateView(r),
 		}
 
 		expenseItemParticipationCreateForm.NotBlank("ShareType", string(*shareType))
-		expenseItemParticipationCreateForm.NotNegative("Share", share)
-		expenseItemParticipationCreateForm.NotNegative("Amount", amount)
-		expenseItemParticipationCreateForm.NotGreaterThan("Amount", amount+allocatedAmount, totalAmount)
+		expenseItemParticipationCreateForm.NotLessThan("Share", share, 0)
+		if *shareType == domain.PERCENTAGE {
+			expenseItemParticipationCreateForm.NotGreaterThan("Share", share, 100)
+		} else {
+			expenseItemParticipationCreateForm.NotGreaterThan("Share", share, totalAmount-allocatedAmount)
+		}
 
 		if !expenseItemParticipationCreateForm.Valid() {
 			s.render(w, r, "expenseItemParticipationCreate.tmpl", http.StatusBadRequest, expenseItemParticipationCreateForm)
 			return
 		}
-
+		now := time.Now()
 		expenseItemShare := domain.ExpenseItemShare{
 			Mezani: domain.Mezani{
 				Id: mezaniId,
@@ -188,26 +194,19 @@ func (s Server) postExpenseItemParticipationCreateHandler() http.Handler {
 			ShareType: *shareType,
 			Share:     share,
 			Amount:    amount,
-			CreatedAt: time.Now(),
+			CreatedAt: now,
 		}
-		oldAmount, err := s.expenseItemService.Participate(expenseItemShare)
+		oldAmount, err := s.expenseItemShareService.Participate(expenseItemShare)
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
-		mezaniShare := domain.MezaniShare{
-			Mezani: domain.Mezani{
-				Id: mezaniId,
-			},
-			Participant: domain.User{
-				Id: userId,
-			},
-			ShareType: domain.EXACT,
-			Share:     share,
-			Amount:    amount - oldAmount,
-			CreatedAt: time.Now(),
+		amountDelta := amount
+		if oldAmount != nil {
+			amountDelta = amountDelta - *oldAmount
+
 		}
-		err = s.mezaniService.Participate(mezaniShare)
+		err = s.expenseItemService.Participate(amountDelta, now, expenseItemId)
 		if err != nil {
 			s.serverError(w, r, err)
 			return
@@ -223,16 +222,43 @@ func (s Server) postExpenseItemParticipationCreateHandler() http.Handler {
 				Id: userId,
 			},
 			ShareType: domain.EXACT,
-			Share:     share,
-			Amount:    amount - oldAmount,
-			CreatedAt: time.Now(),
+			Share:     amountDelta,
+			Amount:    amountDelta,
+			CreatedAt: now,
 		}
-		err = s.expenseService.Participate(expenseShare)
+		err = s.expenseShareService.ParticipateInItem(expenseShare)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		err = s.expenseService.Participate(amountDelta, now, expenseId)
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
 
+		mezaniShare := domain.MezaniShare{
+			Mezani: domain.Mezani{
+				Id: mezaniId,
+			},
+			Participant: domain.User{
+				Id: userId,
+			},
+			ShareType: domain.EXACT,
+			Share:     amountDelta,
+			Amount:    amountDelta,
+			CreatedAt: now,
+		}
+		err = s.mezaniShareService.ParticipateInChild(mezaniShare)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		err = s.mezaniService.Participate(amountDelta, now, mezaniId)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
 		_ = tx.Commit()
 		s.sessionManager.Put(r.Context(), "flash", "Your participation has been saved successfully!")
 		http.Redirect(w, r, fmt.Sprintf("/expenseItems/%d", expenseItemId), http.StatusSeeOther)

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"github.com/aomargithub/mezan/internal/domain"
+	"time"
 )
 
 type MezaniService struct {
@@ -164,20 +165,12 @@ func (s MezaniService) AddAmount(mezaniId int, amount float32) error {
 	return nil
 }
 
-func (e MezaniService) Participate(share domain.MezaniShare) error {
+func (e MezaniService) Participate(
+	allocatedAmount float32,
+	updatedAt time.Time,
+	mezaniId int,
+) error {
 	stmt := `update mezanis set allocated_amount = allocated_amount + $1, last_updated_at = $2 where id = $3`
-	_, err := e.DB.Exec(stmt, share.Amount, share.CreatedAt, share.Mezani.Id)
-	if err != nil {
-		return err
-	}
-
-	stmt = `insert into mezani_shares(created_at, share, amount, share_type, mezani_id, participant_id) 
-			values ($1, $2, $3, $4, $5, $6)
-			on conflict on constraint unique_participant_per_mezani_share 
-			do update set amount = mezani_shares.amount + $3, last_updated_at = $1`
-	_, err = e.DB.Exec(stmt, share.CreatedAt, share.Share, share.Amount, share.ShareType, share.Mezani.Id, share.Participant.Id)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := e.DB.Exec(stmt, allocatedAmount, updatedAt, mezaniId)
+	return err
 }

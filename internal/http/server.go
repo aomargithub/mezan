@@ -24,18 +24,21 @@ const authenticatedUserNameSessionKey = "authenticatedUserNameSessionKey"
 const isAuthenticatedCtxKey = contextKey("isAuthenticated")
 
 type Server struct {
-	Mux                http.Handler
-	StaticDir          string
-	Logger             *slog.Logger
-	DSN                string
-	DB                 *sql.DB
-	sessionManager     *scs.SessionManager
-	mezaniService      db.MezaniService
-	userService        db.UserService
-	expenseService     db.ExpenseService
-	expenseItemService db.ExpenseItemService
-	membershipService  db.MembershipService
-	templates          map[string]*template.Template
+	Mux                     http.Handler
+	StaticDir               string
+	Logger                  *slog.Logger
+	DSN                     string
+	DB                      *sql.DB
+	sessionManager          *scs.SessionManager
+	mezaniService           db.MezaniService
+	mezaniShareService      db.MezaniShareService
+	userService             db.UserService
+	expenseService          db.ExpenseService
+	expenseShareService     db.ExpenseShareService
+	expenseItemService      db.ExpenseItemService
+	expenseItemShareService db.ExpenseItemShareService
+	membershipService       db.MembershipService
+	templates               map[string]*template.Template
 }
 
 type Authentication struct {
@@ -85,20 +88,34 @@ func (s Server) csrfToken(r *http.Request) string {
 }
 
 func (s *Server) initServices() {
+	s.userService = db.UserService{
+		DB: s.DB,
+	}
+
 	s.mezaniService = db.MezaniService{
 		DB: s.DB,
 	}
 
-	s.userService = db.UserService{
+	s.mezaniShareService = db.MezaniShareService{
 		DB: s.DB,
 	}
 
 	s.expenseService = db.ExpenseService{
 		DB: s.DB,
 	}
+
+	s.expenseShareService = db.ExpenseShareService{
+		DB: s.DB,
+	}
+
 	s.expenseItemService = db.ExpenseItemService{
 		DB: s.DB,
 	}
+
+	s.expenseItemShareService = db.ExpenseItemShareService{
+		DB: s.DB,
+	}
+
 	s.membershipService = db.MembershipService{
 		DB: s.DB,
 	}
