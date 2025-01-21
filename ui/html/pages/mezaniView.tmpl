@@ -50,6 +50,9 @@
                                 <td>{{.TotalAmount}}</td>
                                 <td>{{.AllocatedAmount}}</td>
                                 <td>{{.CreatedAt.Format "Mon, 02 Jan 2006 15:04" }}</td>
+                                <td>
+                                    <a href="/expenses/{{.Id}}/participation">Participate</a>
+                                </td>
                             </tr>
                         {{end}}
                     </table>

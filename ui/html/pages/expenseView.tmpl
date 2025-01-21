@@ -71,7 +71,7 @@
                             {{range .Items}}
                                 <tr>
                                     <td>
-                                        <a href="/expenseItems/{{.Id}}"> {{.Name}} </href>
+                                        <a href="/expenseItems/{{.Id}}"> {{.Name}} </a>
                                     </td>
                                     <td>
                                         {{.Quantity}}
@@ -90,6 +90,11 @@
                                     </td>
                                 </tr>
                             {{end}}
+                            <tr>
+                                <td colspan="2">
+                                    <a href="/expenses/{{.Id}}/participation">Participate</a>
+                                </td>
+                            </tr>
                         </table>
                 </td>
             </tr>

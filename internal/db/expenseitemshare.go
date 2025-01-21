@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/aomargithub/mezan/internal/domain"
 )
 
@@ -23,9 +24,27 @@ func (e ExpenseItemShareService) Participate(share domain.ExpenseItemShare) (*fl
 				RETURNING (select old from expense_item_shares old where participant_id = $8 and expense_item_id = $5).amount`
 	row := e.DB.QueryRow(stmt, share.CreatedAt, share.Share, share.Amount, share.ShareType, share.ExpenseItem.Id, share.Expense.Id,
 		share.Mezani.Id, share.Participant.Id)
-	err := row.Scan(&oldAmount)
+	err := row.Scan(oldAmount)
 	if err != nil {
 		return nil, err
 	}
 	return oldAmount, nil
+}
+
+func (e ExpenseItemShareService) GetByExpenseItemIdParticipantId(
+	expenseItemId int,
+	participantId int,
+) (domain.ExpenseItemShare, error) {
+	var expenseItemShare domain.ExpenseItemShare
+	stmt := `select share_type, share, amount from expense_item_shares where expense_item_id = $1 and participant_id = $2`
+	row := e.DB.QueryRow(stmt, expenseItemId, participantId)
+	err := row.Scan(&expenseItemShare.ShareType, &expenseItemShare.Share, &expenseItemShare.Amount)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.ExpenseItemShare{}, domain.ErrNoRecord
+		}
+		return domain.ExpenseItemShare{}, err
+	}
+
+	return expenseItemShare, nil
 }

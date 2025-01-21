@@ -92,6 +92,37 @@ func (e ExpenseService) GetMezaniId(expenseId int) (int, error) {
 	return mezaniId, nil
 }
 
+func (e ExpenseService) GetMezaniIdTotalAmount(expenseId int) (int, float32, error) {
+	stmt := " select mezani_id, total_amount from expenses where id = $1"
+
+	r := e.DB.QueryRow(stmt, expenseId)
+	var mezaniId int
+	var totalAmount float32
+	err := r.Scan(&mezaniId, &totalAmount)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, 0, domain.ErrNoRecord
+		}
+		return 0, 0, err
+	}
+	return mezaniId, totalAmount, nil
+}
+
+func (e ExpenseService) GetTotalAllocatedAmounts(expenseId int) (float32, float32, error) {
+	stmt := " select total_amount, allocated_amount from expenses where id = $1"
+
+	r := e.DB.QueryRow(stmt, expenseId)
+	var totalAmount, allocatedAmount float32
+	err := r.Scan(&totalAmount, &allocatedAmount)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, 0, domain.ErrNoRecord
+		}
+		return 0, 0, err
+	}
+	return totalAmount, allocatedAmount, nil
+}
+
 func (e ExpenseService) IsExist(expenseId int) (bool, error) {
 	var exists bool
 	stmt := `select exists (select 1 from expenses where id = $1)`

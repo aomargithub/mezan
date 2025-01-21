@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/aomargithub/mezan/internal/domain"
 )
 
@@ -23,8 +24,8 @@ func (e ExpenseShareService) ParticipateInItem(share domain.ExpenseShare) error 
 	return err
 }
 
-func (e ExpenseShareService) Participate(share domain.ExpenseShare) (float32, error) {
-	var oldAmount float32
+func (e ExpenseShareService) Participate(share domain.ExpenseShare) (*float32, error) {
+	var oldAmount *float32
 	stmt := `insert into expense_shares(created_at, share, amount, share_type, expense_id, mezani_id, participant_id) 
 			values ($1, $2, $3, $4, $5, $6, $7)
 			on conflict on constraint unique_participant_per_expense_share 
@@ -35,10 +36,27 @@ func (e ExpenseShareService) Participate(share domain.ExpenseShare) (float32, er
 			RETURNING (select old from expense_shares old where participant_id = $7 and expense_id = $5).amount`
 	row := e.DB.QueryRow(stmt, share.CreatedAt, share.Share, share.Amount, share.ShareType, share.Expense.Id,
 		share.Mezani.Id, share.Participant.Id)
-	err := row.Scan(&oldAmount)
+	err := row.Scan(oldAmount)
 	if err != nil {
-		return 0, err
+		return nil, err
+	}
+	return oldAmount, nil
+}
+
+func (e ExpenseShareService) GetByExpenseIdParticipantId(
+	expenseId int,
+	participantId int,
+) (domain.ExpenseShare, error) {
+	var expenseShare domain.ExpenseShare
+	stmt := `select share_type, share, amount from expense_shares where expense_id = $1 and participant_id = $2`
+	row := e.DB.QueryRow(stmt, expenseId, participantId)
+	err := row.Scan(&expenseShare.ShareType, &expenseShare.Share, &expenseShare.Amount)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.ExpenseShare{}, domain.ErrNoRecord
+		}
+		return domain.ExpenseShare{}, err
 	}
 
-	return oldAmount, nil
+	return expenseShare, nil
 }

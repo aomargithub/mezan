@@ -64,12 +64,16 @@ func (s Server) getExpenseItemParticipationCreateHandler() http.Handler {
 			s.clientError(w, http.StatusForbidden, ev)
 			return
 		}
+		expenseItemShare, _ := s.expenseItemShareService.GetByExpenseItemIdParticipantId(expenseItemId, userId)
 		expenseItemParticipationCreateForm := expenseItemParticipationCreateForm{
 			ExpenseId:              expenseId,
 			MezaniId:               mezaniId,
 			ExpenseItemId:          expenseItemId,
 			CommonCreateView:       s.commonCreateView(r),
 			ShareTypes:             domain.ShareTypes,
+			ShareType:              expenseItemShare.ShareType,
+			Amount:                 expenseItemShare.Amount,
+			Share:                  expenseItemShare.Share,
 			ExpenseItemTotalAmount: totalAmount,
 		}
 		_ = tx.Commit()
