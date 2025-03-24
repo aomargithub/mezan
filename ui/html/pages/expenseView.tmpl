@@ -53,6 +53,11 @@
             </tr>
             <tr>
                 <td colspan="2">
+                    <a href="/expenses/{{.Id}}/participation">Participate</a>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
                     <a href="/expenses/{{.Id}}/items/create">Add Item</a>
                 </td>
             </tr>
@@ -87,14 +92,10 @@
                                     </td>
                                     <td>
                                         <a href="/expenseItems/{{.Id}}/participation">Participate</a>
+                                        <a href="/expenseItems/{{.Id}}/update">Update</a>
                                     </td>
                                 </tr>
                             {{end}}
-                            <tr>
-                                <td colspan="2">
-                                    <a href="/expenses/{{.Id}}/participation">Participate</a>
-                                </td>
-                            </tr>
                         </table>
                 </td>
             </tr>

@@ -1,0 +1,10 @@
+{{define "title"}}Update expense item {{end}}
+{{define "main"}}
+    <form action='/expenseItems/{{.ExpenseItemId}}' method='PUT'>
+        {{template "expenseItem.tmpl" .}}
+        <div>
+            <input type='submit' value='Update'/>
+        </div>
+    </form>
+    <script src='/static/js/expense-item-update.js' type='text/javascript'></script>
+{{end}}

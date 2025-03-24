@@ -21,6 +21,13 @@ func (e ExpenseItemService) Create(expenseItem domain.ExpenseItem) error {
 	return err
 }
 
+func (e ExpenseItemService) Update(expenseItem domain.ExpenseItem) error {
+	stmt := `update expense_items set name = $1, amount = $2, total_amount = $3, quantity = $4, last_updated_at = $5 where id = $6`
+	_, err := e.DB.Exec(stmt, expenseItem.Name, expenseItem.Amount, expenseItem.TotalAmount,
+		expenseItem.Quantity, expenseItem.LastUpdatedAt, expenseItem.Id)
+	return err
+}
+
 func (e ExpenseItemService) GetExpenseIdMezaniIdTotalAmount(expenseItemId int) (int, int, float32, error) {
 	stmt := " select mezani_id, expense_id, total_amount from expense_items where id = $1"
 
@@ -74,6 +81,22 @@ func (e ExpenseItemService) Get(expenseItemId int) (domain.ExpenseItem, error) {
 		return domain.ExpenseItem{}, err
 	}
 	return item, nil
+}
+
+func (e ExpenseItemService) IsExist(expenseItemId int) (bool, error) {
+	var exists bool
+	stmt := `select exists (select 1 from expense_items where id = $1)`
+	row := e.DB.QueryRow(stmt, expenseItemId)
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+func (e ExpenseItemService) GetCreatorId(expenseItemId int) (int, error) {
+	var creatorId int
+	stmt := `select creator_id from expense_items where id = $1`
+	row := e.DB.QueryRow(stmt, expenseItemId)
+	err := row.Scan(&creatorId)
+	return creatorId, err
 }
 
 func (e ExpenseItemService) Participate(

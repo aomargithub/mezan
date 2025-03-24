@@ -36,7 +36,7 @@ func (s Server) getMezaniCreateHandler() http.Handler {
 	})
 }
 
-func (s Server) postMezaniCreateHandler() http.Handler {
+func (s Server) mezaniCreateHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 		err := r.ParseForm()

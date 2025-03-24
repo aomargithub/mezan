@@ -79,7 +79,7 @@ func (s Server) getExpenseParticipationCreateHandler() http.Handler {
 	})
 }
 
-func (s Server) postExpenseParticipationCreateHandler() http.Handler {
+func (s Server) expenseParticipationCreateHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		expenseId, err := strconv.Atoi(r.PathValue("expenseId"))
 		if err != nil {

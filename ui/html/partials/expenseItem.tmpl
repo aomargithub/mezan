@@ -1,0 +1,29 @@
+<input type='hidden' name='csrf_token' value='{{.CsrfToken}}'>
+<div>
+    <label for="name">Name:</label>
+    {{with .FieldErrors.Name}}
+        <label class='error'>{{.}}</label>
+    {{end}}
+    <input type='text' name='name' id="name" value='{{.Name}}'/>
+</div>
+<div>
+    <label for="amount">Amount:</label>
+    {{with .FieldErrors.Amount}}
+        <label class='error'>{{.}}</label>
+    {{end}}
+    <input type='text' name='amount' id="amount" value='{{.Amount}}'/>
+</div>
+<div>
+    <label for="quantity">Quantity:</label>
+    {{with .FieldErrors.Quantity}}
+        <label class='error'>{{.}}</label>
+    {{end}}
+    <input type='text' name='quantity' id="quantity" value='{{.Quantity}}'/>
+</div>
+<div>
+    <label  for="totalAmount">TotalAmount:</label>
+    {{with .FieldErrors.TotalAmount}}
+        <label class='error'>{{.}}</label>
+    {{end}}
+    <input type='text' name='totalAmount'  id="totalAmount" value='{{.TotalAmount}}'/>
+</div>

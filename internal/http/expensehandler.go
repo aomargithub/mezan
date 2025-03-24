@@ -74,7 +74,7 @@ func (s Server) getExpenseCreateHandler() http.Handler {
 	})
 }
 
-func (s Server) postExpenseCreateHandler() http.Handler {
+func (s Server) expenseCreateHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mezaniId, err := strconv.Atoi(r.PathValue("mezaniId"))
 		if err != nil {

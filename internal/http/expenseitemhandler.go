@@ -19,6 +19,15 @@ type expenseItemCreateForm struct {
 	CommonCreateView
 }
 
+type expenseItemUpdateForm struct {
+	ExpenseItemId int
+	Name          string
+	TotalAmount   float32
+	Quantity      float32
+	Amount        float32
+	CommonCreateView
+}
+
 type expenseItemView struct {
 	ExpenseItem domain.ExpenseItem
 	CommonView
@@ -78,7 +87,64 @@ func (s Server) getExpenseItemCreateHandler() http.Handler {
 	})
 }
 
-func (s Server) postExpenseItemCreateHandler() http.Handler {
+func (s Server) getExpenseItemUpdateHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		expenseItemId, err := strconv.Atoi(r.PathValue("expenseItemId"))
+		if err != nil {
+			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+		tx, err := s.DB.Begin()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		defer s.expenseItemService.Rollback(tx)
+		expenseItem, err := s.expenseItemService.Get(expenseItemId)
+
+		if err != nil {
+			if errors.Is(err, domain.ErrNoRecord) {
+				params := make(map[string]string)
+				params["type"] = "ExpenseItem"
+				params["id"] = strconv.Itoa(expenseItemId)
+				ev := errorView{
+					Data:       params,
+					CommonView: s.commonView(r),
+				}
+				s.clientError(w, http.StatusNotFound, ev)
+				return
+			}
+			s.serverError(w, r, err)
+			return
+		}
+
+		userId, _ := s.getCurrentUserInfo(r)
+		accessible, err := s.membershipService.ExpenseItemAccessibleBy(expenseItemId, userId)
+		if !accessible {
+			params := make(map[string]string)
+			params["type"] = "ExpenseItem"
+			params["id"] = strconv.Itoa(expenseItemId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusForbidden, ev)
+			return
+		}
+		expenseItemUpdateForm := expenseItemUpdateForm{
+			ExpenseItemId:    expenseItem.Id,
+			Name:             expenseItem.Name,
+			TotalAmount:      expenseItem.TotalAmount,
+			Quantity:         expenseItem.Quantity,
+			Amount:           expenseItem.Amount,
+			CommonCreateView: s.commonCreateView(r),
+		}
+		_ = tx.Commit()
+		s.render(w, r, "expenseItemUpdate.tmpl", http.StatusOK, expenseItemUpdateForm)
+	})
+}
+
+func (s Server) expenseItemCreateHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		expenseId, err := strconv.Atoi(r.PathValue("expenseId"))
 		if err != nil {
@@ -159,9 +225,9 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 		}
 
 		expenseItemCreateForm := expenseItemCreateForm{
-			Name:             name,
 			ExpenseId:        expenseId,
 			MezaniId:         mezaniId,
+			Name:             name,
 			Amount:           amount,
 			TotalAmount:      totalAmount,
 			Quantity:         quantity,
@@ -187,6 +253,137 @@ func (s Server) postExpenseItemCreateHandler() http.Handler {
 			Expense:     domain.Expense{Id: expenseId},
 		}
 		err = s.expenseItemService.Create(expenseItem)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		err = s.expenseService.AddAmount(expenseId, totalAmount)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		err = s.mezaniService.AddAmount(mezaniId, totalAmount)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		err = tx.Commit()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		s.sessionManager.Put(r.Context(), "flash", "Item successfully created!")
+		http.Redirect(w, r, fmt.Sprintf("/expenses/%d", expenseId), http.StatusSeeOther)
+		return
+	})
+}
+
+func (s Server) expenseItemUpdateHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		expenseItemId, err := strconv.Atoi(r.PathValue("expenseItemId"))
+		if err != nil {
+			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+		tx, err := s.DB.Begin()
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+		defer s.expenseItemService.Rollback(tx)
+
+		exists, err := s.expenseItemService.IsExist(expenseItemId)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+
+		if !exists {
+			params := make(map[string]string)
+			params["type"] = "Expense Item"
+			params["id"] = strconv.Itoa(expenseItemId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusNotFound, ev)
+			return
+		}
+
+		userId, _ := s.getCurrentUserInfo(r)
+		accessible, err := s.membershipService.ExpenseItemAccessibleBy(expenseItemId, userId)
+		if !accessible {
+			params := make(map[string]string)
+			params["type"] = "Expense Item"
+			params["id"] = strconv.Itoa(expenseItemId)
+			ev := errorView{
+				Data:       params,
+				CommonView: s.commonView(r),
+			}
+			s.clientError(w, http.StatusForbidden, ev)
+			return
+		}
+
+		err = r.ParseForm()
+		if err != nil {
+			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+		name := r.PostForm.Get("name")
+
+		amount64, err := strconv.ParseFloat(r.PostForm.Get("amount"), 32)
+		if err != nil {
+			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+		amount := float32(amount64)
+
+		totalAmount64, err := strconv.ParseFloat(r.PostForm.Get("totalAmount"), 32)
+		if err != nil {
+			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+		totalAmount := float32(totalAmount64)
+
+		quantity64, err := strconv.ParseFloat(r.PostForm.Get("quantity"), 32)
+		if err != nil {
+			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+		quantity := float32(quantity64)
+
+		mezaniId, err := strconv.Atoi(r.PostForm.Get("mezaniId"))
+		if err != nil {
+			s.clientError(w, http.StatusBadRequest)
+			return
+		}
+
+		expenseItemUpdateForm := expenseItemUpdateForm{
+			ExpenseItemId:    expenseItemId,
+			Name:             name,
+			Amount:           amount,
+			TotalAmount:      totalAmount,
+			Quantity:         quantity,
+			CommonCreateView: s.commonCreateView(r),
+		}
+		expenseItemUpdateForm.NotBlank("Name", name)
+		expenseItemUpdateForm.NotNegative("TotalAmount", totalAmount)
+		expenseItemUpdateForm.NotNegative("amount", amount)
+		expenseItemUpdateForm.NotNegative("quantity", quantity)
+
+		if !expenseItemUpdateForm.Valid() {
+			s.render(w, r, "expenseItemUpdate.tmpl", http.StatusBadRequest, expenseItemUpdateForm)
+			return
+		}
+		expenseItem := domain.ExpenseItem{
+			Id:            expenseItemId,
+			Name:          name,
+			Amount:        amount,
+			TotalAmount:   totalAmount,
+			LastUpdatedAt: time.Now(),
+			Quantity:      quantity,
+		}
+		err = s.expenseItemService.Update(expenseItem)
 		if err != nil {
 			s.serverError(w, r, err)
 			return

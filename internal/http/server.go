@@ -132,6 +132,7 @@ func (s *Server) initTemplateCache() {
 		files := []string{
 			"./ui/html/base.tmpl",
 			"./ui/html/partials/nav.tmpl",
+			"./ui/html/partials/expenseItem.tmpl",
 			page,
 		}
 
@@ -152,17 +153,19 @@ func (s *Server) registerHandlers() {
 	mux.Handle("GET /mezanis/{id}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniViewHandler())))))
 	mux.Handle("GET /mezanis/shareId/{shareId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniViewByShareIdHandler())))))
 	mux.Handle("GET /mezanis/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getMezaniCreateHandler())))))
-	mux.Handle("POST /mezanis/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postMezaniCreateHandler())))))
+	mux.Handle("POST /mezanis/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.mezaniCreateHandler())))))
 	mux.Handle("GET /mezanis/{mezaniId}/expenses/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseCreateHandler())))))
-	mux.Handle("POST /mezanis/{mezaniId}/expenses/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postExpenseCreateHandler())))))
+	mux.Handle("POST /mezanis/{mezaniId}/expenses/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.expenseCreateHandler())))))
 	mux.Handle("GET /expenses/{expenseId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseViewHandler())))))
 	mux.Handle("GET /expenses/{expenseId}/items/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemCreateHandler())))))
-	mux.Handle("POST /expenses/{expenseId}/items/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postExpenseItemCreateHandler())))))
+	mux.Handle("POST /expenses/{expenseId}/items/create", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.expenseItemCreateHandler())))))
 	mux.Handle("GET /expenses/{expenseId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseParticipationCreateHandler())))))
-	mux.Handle("POST /expenses/{expenseId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postExpenseParticipationCreateHandler())))))
+	mux.Handle("POST /expenses/{expenseId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.expenseParticipationCreateHandler())))))
 	mux.Handle("GET /expenseItems/{expenseItemId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemViewHandler())))))
+	mux.Handle("PUT /expenseItems/{expenseItemId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.expenseItemUpdateHandler())))))
+	mux.Handle("GET /expenseItems/{expenseItemId}/update", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemUpdateHandler())))))
 	mux.Handle("GET /expenseItems/{expenseItemId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemParticipationCreateHandler())))))
-	mux.Handle("POST /expenseItems/{expenseItemId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.postExpenseItemParticipationCreateHandler())))))
+	mux.Handle("POST /expenseItems/{expenseItemId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.expenseItemParticipationCreateHandler())))))
 
 	mux.Handle("GET /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.getUserSignUpHandler())))
 	mux.Handle("POST /users/signup", s.sessionManager.LoadAndSave(s.noSurf(s.postUserSignUpHandler())))
