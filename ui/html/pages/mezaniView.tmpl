@@ -42,6 +42,7 @@
                             <td>Total Amount</td>
                             <td>Allocated Amount</td>
                             <td>Created On</td>
+                            <td>Actions</td>
                         </tr>
                         {{range .Expenses}}
                             <tr>
@@ -51,7 +52,9 @@
                                 <td>{{.AllocatedAmount}}</td>
                                 <td>{{.CreatedAt.Format "Mon, 02 Jan 2006 15:04" }}</td>
                                 <td>
-                                    <a href="/expenses/{{.Id}}/participation">Participate</a>
+                                    {{if not .HasItems}}
+                                        <a href="/expenses/{{.Id}}/participation">Participate</a>
+                                    {{end}}
                                 </td>
                             </tr>
                         {{end}}

@@ -352,12 +352,6 @@ func (s Server) expenseItemUpdateHandler() http.Handler {
 		}
 		quantity := float32(quantity64)
 
-		mezaniId, err := strconv.Atoi(r.PostForm.Get("mezaniId"))
-		if err != nil {
-			s.clientError(w, http.StatusBadRequest)
-			return
-		}
-
 		expenseItemUpdateForm := expenseItemUpdateForm{
 			ExpenseItemId:    expenseItemId,
 			Name:             name,
@@ -383,17 +377,22 @@ func (s Server) expenseItemUpdateHandler() http.Handler {
 			LastUpdatedAt: time.Now(),
 			Quantity:      quantity,
 		}
+		mezaniId, expenseId, oldTotalAmount, err := s.expenseItemService.GetMezaniExpenseIdsAndTotalAmount(expenseItemId)
+		if err != nil {
+			s.serverError(w, r, err)
+			return
+		}
 		err = s.expenseItemService.Update(expenseItem)
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
-		err = s.expenseService.AddAmount(expenseId, totalAmount)
+		err = s.expenseService.AddAmount(expenseId, totalAmount-oldTotalAmount)
 		if err != nil {
 			s.serverError(w, r, err)
 			return
 		}
-		err = s.mezaniService.AddAmount(mezaniId, totalAmount)
+		err = s.mezaniService.AddAmount(mezaniId, totalAmount-oldTotalAmount)
 		if err != nil {
 			s.serverError(w, r, err)
 			return
@@ -403,7 +402,7 @@ func (s Server) expenseItemUpdateHandler() http.Handler {
 			s.serverError(w, r, err)
 			return
 		}
-		s.sessionManager.Put(r.Context(), "flash", "Item successfully created!")
+		s.sessionManager.Put(r.Context(), "flash", "Item successfully updated!")
 		http.Redirect(w, r, fmt.Sprintf("/expenses/%d", expenseId), http.StatusSeeOther)
 		return
 	})

@@ -53,7 +53,9 @@
             </tr>
             <tr>
                 <td colspan="2">
-                    <a href="/expenses/{{.Id}}/participation">Participate</a>
+                    {{if not .HasItems}}
+                        <a href="/expenses/{{.Id}}/participation">Participate</a>
+                    {{end}}
                 </td>
             </tr>
             <tr>

@@ -91,6 +91,18 @@ func (e ExpenseItemService) IsExist(expenseItemId int) (bool, error) {
 	return exists, err
 }
 
+func (e ExpenseItemService) GetMezaniExpenseIdsAndTotalAmount(expenseItemId int) (int, int, float32, error) {
+	var (
+		mezaniId    int
+		expenseId   int
+		totalAmount float32
+	)
+	stmt := `select mezani_id, expense_id, total_amount from expense_items where id = $1`
+	row := e.DB.QueryRow(stmt, expenseItemId)
+	err := row.Scan(&mezaniId, &expenseId, &totalAmount)
+	return mezaniId, expenseId, totalAmount, err
+}
+
 func (e ExpenseItemService) GetCreatorId(expenseItemId int) (int, error) {
 	var creatorId int
 	stmt := `select creator_id from expense_items where id = $1`

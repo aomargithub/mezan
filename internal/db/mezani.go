@@ -34,6 +34,7 @@ func (s MezaniService) Get(id int) (domain.Mezani, error) {
 				   COALESCE(e.name, '')                                          as expense_name,
 				   COALESCE(e.total_amount, 0)                                   as expense_total_amount,
 				   COALESCE(e.allocated_amount, 0)                               as expense_allocated_amount,
+				   COALESCE(e.has_items, false)                                  as expense_has_items,
 				   COALESCE(e.created_at, '0001-01-01 00:00:00+00'::timestamptz) as expense_created_at,
 				   COALESCE(u2.name, '')                                         as expense_creator_name
 			from mezanis m
@@ -49,7 +50,7 @@ func (s MezaniService) Get(id int) (domain.Mezani, error) {
 	for rows.Next() {
 		var expense domain.Expense
 		err = rows.Scan(&mezani.Id, &mezani.Name, &mezani.TotalAmount, &mezani.AllocatedAmount, &mezani.CreatedAt, &mezani.Creator.Name,
-			&expense.Id, &expense.Name, &expense.TotalAmount, &expense.AllocatedAmount, &expense.CreatedAt, &expense.Creator.Name)
+			&expense.Id, &expense.Name, &expense.TotalAmount, &expense.AllocatedAmount, &expense.HasItems, &expense.CreatedAt, &expense.Creator.Name)
 		if err != nil {
 			return domain.Mezani{}, err
 		}

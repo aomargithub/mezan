@@ -162,7 +162,7 @@ func (s *Server) registerHandlers() {
 	mux.Handle("GET /expenses/{expenseId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseParticipationCreateHandler())))))
 	mux.Handle("POST /expenses/{expenseId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.expenseParticipationCreateHandler())))))
 	mux.Handle("GET /expenseItems/{expenseItemId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemViewHandler())))))
-	mux.Handle("PUT /expenseItems/{expenseItemId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.expenseItemUpdateHandler())))))
+	mux.Handle("POST /expenseItems/{expenseItemId}", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.expenseItemUpdateHandler())))))
 	mux.Handle("GET /expenseItems/{expenseItemId}/update", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemUpdateHandler())))))
 	mux.Handle("GET /expenseItems/{expenseItemId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.getExpenseItemParticipationCreateHandler())))))
 	mux.Handle("POST /expenseItems/{expenseItemId}/participation", s.sessionManager.LoadAndSave(s.noSurf(s.authenticate(s.requireAuthentication(s.expenseItemParticipationCreateHandler())))))
